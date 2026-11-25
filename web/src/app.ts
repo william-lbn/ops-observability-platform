@@ -69,30 +69,59 @@ async function platformView(current: number) {
     const d = await api('platform/dashboard');
     if (generation !== current)
         return;
-    const grid = node('div', '', 'grid');
+    const inventory = array(d.inventory);
+    const namespaces = inventory.filter(v => v.kind === 'kubernetes.namespace.health');
+    const diagnostics = array(d.diagnostics);
+    const scope = node('section', '', 'resource-scope');
+    const scopeHeader = node('div');
+    scopeHeader.append(node('strong', '基础设施运行视图'), node('p', '观察时刻 ' + time(d.as_of) + ' · 北京时间 · 平台只读'));
+    scope.append(scopeHeader, node('span', '维护工作负载单独观察', 'resource-status'));
+    view.append(scope);
+    const navigation = node('nav', '', 'resource-nav');
+    navigation.setAttribute('aria-label', '资源视图分层');
+    for (const [id, title] of [['checks', '待核查'], ['nodes', '节点与容量'], ['workloads', '命名空间与配额'], ['signals', '网络、存储与采集']]) {
+        const target = node('a', title) as HTMLAnchorElement;
+        target.href = '#resource-' + id;
+        navigation.append(target);
+    }
+    view.append(navigation);
+    const section = (id: string, title: string) => {
+        const p = panel(title);
+        p.id = 'resource-' + id;
+        p.classList.add('resource-panel');
+        return p;
+    };
+    const grid = node('div', '', 'grid resource-grid');
     card(grid, '预期节点', String(d.expectedNodes), '登记时固定的节点身份集合；发现新节点需要重新核验登记。');
     card(grid, '新鲜且就绪', String(d.readyNodes) + ' / ' + String(d.expectedNodes), '当前 Ready 条件与 90 秒观察窗口共同判断。');
     card(grid, '过期或未观察到', String(d.unknownNodes), '采集失效与节点故障分别核验；缺失节点保留在分母。');
-    card(grid, '证据覆盖', '平台只读 · 部分', '当前快照与指标帮助定位问题，不改变原业务操作结果。');
+    card(grid, '待核查事项', String(diagnostics.length), '来自当前平台节点、基础设施服务与数据质量。');
     view.append(grid);
-    const diagnostic = panel('当前需要处理或核验的问题');
-    const diagnostics = array(d.diagnostics);
+    const diagnostic = section('checks', '当前需要核查');
     if (!diagnostics.length)
         diagnostic.append(node('p', '当前已观察范围内未触发诊断条件；仍需核对指标、来源质量与未启用能力。'));
     diagnostics.forEach(item => { const p = node('article', '', 'diagnostic'); p.append(node('h3', String(item.title)), node('p', String(item.nextStep)), node('p', '证据时刻：' + time(item.observedAt) + ' · 手册：' + String(item.runbook), 'muted')); diagnostic.append(p); });
-    const inventory = array(d.inventory);
-    table(panel('节点资源与身份'), ['节点', '当前观察', 'CPU / 内存用量', '可分配容量', '用量样本时刻', '资源最后观察'], inventory.filter(v => v.kind === 'kubernetes.node').map(v => { const s = obj(v.snapshot); const conditions = array(s.conditions); const state = conditions.find(c => c.type === 'Ready'); const usage = obj(obj(s.usage).values); const capacity = obj(s.allocatable); const mem = quantity(capacity.memory); return [String(v.name), v.stale ? '观察已过期' : state?.status === 'True' ? '就绪' : '需要核验', s.usageAvailable ? resourceUsage(usage, capacity) : 'metrics-server 暂不可读或样本已过期', String(quantity(capacity.cpu) ?? '未知') + ' 核 / ' + (mem === null ? '未提供' : (mem / 1024 ** 3).toFixed(1) + ' GiB'), time(obj(s.usage).asOf), time(v.observedAt)]; }));
-    table(panel('命名空间运行健康'), ['命名空间', '就绪 / 观察 Pod', '异常启动 / 副本创建失败', '待绑定 PVC', '历史失败 / 已完成', '配额与观察质量'], inventory.filter(v => v.kind === 'kubernetes.namespace.health').map(v => { const s = obj(v.snapshot); const detail = node('details'); detail.append(node('summary', v.stale ? '数据过期 · 待确认' : '查看配额 hard / used')); for (const q of array(s.quotas)) {
+    table(section('nodes', '节点与计算资源'), ['节点', '当前观察', 'CPU / 内存用量', '可分配容量', '用量样本时刻', '资源最后观察'], inventory.filter(v => v.kind === 'kubernetes.node').map(v => { const s = obj(v.snapshot); const conditions = array(s.conditions); const state = conditions.find(c => c.type === 'Ready'); const usage = obj(obj(s.usage).values); const capacity = obj(s.allocatable); const mem = quantity(capacity.memory); const status = node('span', v.stale ? '观察已过期' : state?.status === 'True' ? '就绪' : '需要核验', 'resource-badge'); status.dataset.state = v.stale ? 'unknown' : state?.status === 'True' ? 'ready' : 'warning'; return [String(v.name), status, s.usageAvailable ? resourceUsage(usage, capacity) : '用量暂不可读或样本已过期', String(quantity(capacity.cpu) ?? '未知') + ' 核 / ' + (mem === null ? '未提供' : (mem / 1024 ** 3).toFixed(1) + ' GiB'), time(obj(s.usage).asOf), time(v.observedAt)]; }));
+    const workloadPanel = section('workloads', '命名空间与配额');
+    workloadPanel.append(node('p', '平台告警覆盖公共平台、系统服务和证书组件。Neon 部署、卸载和更新归入维护观察。', 'muted'));
+    const columns = ['命名空间', '就绪 / 观察 Pod', '异常启动 / 副本创建失败', '待绑定卷声明', '历史失败 / 已完成', '配额与观察质量'];
+    const rowsFor = (values: RecordData[]) => values.map(v => { const s = obj(v.snapshot); const detail = node('details'); detail.append(node('summary', v.stale ? '数据过期 · 待确认' : '查看已用量与配额')); for (const q of array(s.quotas)) {
         const hard = obj(q.hard), used = obj(q.used);
         for (const key of Object.keys(hard))
             detail.append(node('p', String(q.name) + ' · ' + key + '：' + String(used[key] ?? '未提供') + ' / ' + String(hard[key]), 'muted'));
     } if (!array(s.quotas).length)
-        detail.append(node('p', '未获得已配置配额；这不表示容量无限。')); return [identityLabel(v), String(s.ready) + ' / ' + String(s.pods), String(s.crashLoops) + ' / ' + String(s.controllerFailures ?? '未提供'), String(s.pendingPVCs), String(s.historicalFailed) + ' / ' + String(s.completed), detail]; }));
+        detail.append(node('p', '未获得已配置配额；容量上限待核对。')); return [identityLabel(v), String(s.ready ?? '未知') + ' / ' + String(s.pods ?? '未知'), String(s.crashLoops ?? '未知') + ' / ' + String(s.controllerFailures ?? '未知'), String(s.pendingPVCs ?? '未知'), String(s.historicalFailed ?? '未知') + ' / ' + String(s.completed ?? '未知'), detail]; });
+    table(workloadPanel, columns, rowsFor(namespaces.filter(v => v.alertScope === 'platform')));
+    const observation = node('details', '', 'resource-observation');
+    const observedNamespaces = namespaces.filter(v => v.alertScope !== 'platform');
+    observation.append(node('summary', '维护及其他仅观察的命名空间 · ' + observedNamespaces.length));
+    table(observation, columns, rowsFor(observedNamespaces));
+    workloadPanel.append(observation);
     const quality = panel('来源身份与采集质量');
     table(quality, ['来源', '当前状态', '最近成功观察', '预期 / 已观察', '错误代码'], array(d.sources).map(s => [String(s.source), s.stale ? '观察已过期 · 当前待确认' : s.state === 'observed_partial' ? '已观察 · 部分覆盖' : s.state === 'observed_incomplete' ? '预期采集目标缺少样本' : s.state === 'identity_changed' ? '身份变化 · 已停止接纳' : '来源暂不可读', time(s.lastSuccessAt), String(Array.isArray(s.expectedSet) ? s.expectedSet.length : 0) + ' / ' + String(Array.isArray(s.observedSet) ? s.observedSet.length : 0), String(s.errorCode || '无已记录错误')]));
-    const metricPanel = panel('基础设施指标快照');
+    const metricPanel = section('signals', '网络、存储与采集快照');
     metricPanel.append(node('p', '数据来自平台域固定查询。空结果表示未获得样本；正常零值单独显示。', 'muted'));
-    for (const [metric, title, unit] of [['node_cpu', 'CPU 使用率', '%'], ['node_memory', '内存使用率', '%'], ['disk_used', '文件系统使用率', '%'], ['network_drops', '网卡丢包速率', '次/秒'], ['dns_failures', 'DNS 失败响应速率', '次/秒'], ['collector_refused', '采集入口拒绝速率', '条/秒'], ['collector_send_failed', '日志投递失败速率', '条/秒']]) {
+    for (const [metric, title, unit] of [['disk_used', '节点文件系统使用率', '%'], ['network_drops', '节点网卡丢包速率', '次/秒'], ['dns_failures', 'DNS 失败响应速率', '次/秒'], ['collector_send_failed', '采集链路投递失败速率', '条/秒']]) {
         metricPanel.append(node('h3',title!));
         try {
             const data = await api('platform/query?metric=' + metric);
@@ -105,7 +134,7 @@ async function platformView(current: number) {
             metricPanel.append(node('p', title + '：' + (e as Error).message, 'muted'));
         }
     }
-    panel('平台观测边界').append(node('p', '当前覆盖节点资源、命名空间健康、采集链路和服务遥测。内核级网络流、持续剖析、审计全量历史、跨节点存储高可用尚未获本环境运行资格；Neon 领域接入关闭。'));
+    panel('趋势和诊断入口').append(node('p', '工程师可在受控 Grafana 中查看「公共平台资源总览」以及计算、网络、存储、调度、采集趋势。KVM 设备资格、对象存储及单卷已用容量由独立来源核实。'));
 }
 function supportsSignal(source: RecordData, signal: string): boolean {
     if (Array.isArray(source.signals) && source.signals.length)

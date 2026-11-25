@@ -69,6 +69,8 @@ jobs:
           tar -xzf /tmp/helm.tar.gz -C /tmp
           export PATH="/tmp/linux-amd64:$PATH"
           python3 tests/validate-chart.py
+      - name: 校验 Grafana 离线仪表板与平台数据范围
+        run: python3 tests/validate-grafana-dashboards.py
       - name: 应用 HTTPS 与数据库端到端验证
         run: python3 tests/ci-e2e.py
       - name: 保存构建核验制品与测试记录

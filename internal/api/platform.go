@@ -25,6 +25,18 @@ var platformQueries = map[string]string{
 	"collector_queue":       "max by(job)(otelcol_exporter_queue_size{ops_tenant=\"platform\"}/otelcol_exporter_queue_capacity{ops_tenant=\"platform\"})",
 }
 
+// Shared cluster workloads stay visible, but platform alerts only apply to
+// infrastructure managed by this profile. Deployment churn elsewhere is
+// published as an observation.
+func platformWorkloadMonitored(namespace string) bool {
+	switch namespace {
+	case "ops-observability", "kube-system", "cert-manager":
+		return true
+	default:
+		return false
+	}
+}
+
 func (s *Server) platformQuery(w http.ResponseWriter, r *http.Request, p config.Principal, cfg config.Config, id string) {
 	if !authz.PlatformRead(p) {
 		failure(w, 403, "platform_scope_denied", "当前角色没有平台级数据读取权限", id)
@@ -85,6 +97,12 @@ func (s *Server) platformDashboard(w http.ResponseWriter, r *http.Request, p con
 			}
 			stale := time.Since(at) > 90*time.Second || quality == "identity_changed" || quality == "unknown" || (kind == "kubernetes.node" && !observed)
 			item := map[string]any{"source": source, "uid": uid, "name": name, "kind": kind, "snapshot": snapshot, "observedAt": at, "stale": stale}
+			if kind == "kubernetes.namespace.health" {
+				item["alertScope"] = "observe_only"
+				if platformWorkloadMonitored(name) {
+					item["alertScope"] = "platform"
+				}
+			}
 			items = append(items, item)
 			if kind == "kubernetes.node" {
 				seen[uid] = true
@@ -95,7 +113,7 @@ func (s *Server) platformDashboard(w http.ResponseWriter, r *http.Request, p con
 					if condition["type"] == "Ready" && condition["status"] == "True" {
 						ready = true
 					}
-					if condition["status"] == "True" && (condition["type"] == "MemoryPressure" || condition["type"] == "DiskPressure" || condition["type"] == "PIDPressure" || condition["type"] == "NetworkUnavailable") {
+					if expected[uid] && !stale && condition["status"] == "True" && (condition["type"] == "MemoryPressure" || condition["type"] == "DiskPressure" || condition["type"] == "PIDPressure" || condition["type"] == "NetworkUnavailable") {
 						diagnostics = append(diagnostics, map[string]any{"title": name + "：观察到节点压力", "severity": "warning", "fact": condition["type"], "sourceUID": uid, "observedAt": at, "runbook": "node-pressure", "nextStep": "核对节点资源、存储和网络的当前指标，再关联受影响服务；不要直接重启共享节点"})
 					}
 				}
@@ -112,7 +130,7 @@ func (s *Server) platformDashboard(w http.ResponseWriter, r *http.Request, p con
 					}
 				}
 			}
-			if kind == "kubernetes.namespace.health" && !stale {
+			if kind == "kubernetes.namespace.health" && !stale && platformWorkloadMonitored(name) {
 				crashes, _ := snapshot["crashLoops"].(float64)
 				pending, _ := snapshot["pendingPVCs"].(float64)
 				if crashes > 0 || pending > 0 {

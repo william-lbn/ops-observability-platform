@@ -3,13 +3,13 @@
   "profile": "rke2-local-amd64",
   "artifactNamespace": "ops-platform",
   "application": {
-    "version": "0.1.0+8ed0302dd795",
-    "applicationSourceSHA256": "8ed0302dd7955d4172f473dfcbc69ea8e09ca4776d842855b4915fc2646d1ea2",
+    "version": "0.1.0+5287982f5e2c",
+    "applicationSourceSHA256": "5287982f5e2c10cdb87f47ff3b8d2b81844316984a6deb6607b61005d7268562",
     "images": [
       {
         "name": "platform",
-        "harborDigest": "sha256:b46a1d7724b0504de0ba41dac2cd3271ba0692fb4f3ffe754359981b3053b1dd",
-        "archiveSHA256": "4f366719bdae428991200ba5d936c21f2eab13069ef65e261b2c966c4c5116ad"
+        "harborDigest": "sha256:5d0212a6bf429451adee13debe612273e607487c91a41f7ef98f259f2b1ae549",
+        "archiveSHA256": "7a60ea8b33e0c693edd7168ed76dd0e2b037c7227a7cc56d5cb89fddf7dd5c89"
       },
       {
         "name": "reference",
@@ -73,6 +73,7 @@
   ],
   "offlineBuildTools": {
     "name": "offline-tools",
+    "bundledApplicationSourceSHA256": "8ed0302dd7955d4172f473dfcbc69ea8e09ca4776d842855b4915fc2646d1ea2",
     "harborDigest": "sha256:853d70c416baa2bf6d4a43f524f7c8ebab08004dbadf6741947532f1d5155d6e",
     "archiveSHA256": "f0b9616b761d82e70a637800cbeb88f62b6bbcb0c46c28ae7481f28c7bf3a42b",
     "sboms": {
@@ -80,6 +81,11 @@
       "reference.spdx.json": "9de41976bc816ff0df7676c4edb98c600689ec3e54a03f66c88481fa68ad5747",
       "source.spdx.json": "2926129cb29dcd05a9d964756dfdb6bfc312d52022e25cf1e7acc57740a5a22e"
     }
+  },
+  "visualization": {
+    "grafanaDashboardConfigMap": "ops-platform-resource-dashboards-v2",
+    "grafanaDashboardCount": 6,
+    "grafanaDefaultLanguage": "zh-Hans"
   },
   "neonEnabled": false,
   "namingProfile": {

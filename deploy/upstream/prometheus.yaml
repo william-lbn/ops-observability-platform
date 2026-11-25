@@ -112,7 +112,7 @@ serverFiles:
             labels: {severity: warning, source: collectors, ops_tenant: platform}
             annotations: {summary: 采集端仍可能可达，但日志投递失败；请核对后端、队列和缺口}
           - alert: 平台副本创建条件异常
-            expr: kube_deployment_status_condition{condition="ReplicaFailure",status="true",ops_tenant="platform"} == 1
+            expr: kube_deployment_status_condition{condition="ReplicaFailure",status="true",ops_tenant="platform",namespace=~"ops-observability|kube-system|cert-manager"} == 1
             for: 30s
             labels: {severity: warning, source: cluster-platform, ops_tenant: platform}
             annotations: {summary: 控制器报告副本创建异常，请比较配额余量与滚动更新需求}
