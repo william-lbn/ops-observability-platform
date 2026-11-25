@@ -23,6 +23,6 @@ spec:
       ports: [{protocol: TCP, port: 4318}]
     - to:
         - namespaceSelector: {matchLabels: {kubernetes.io/metadata.name: {{ .Values.platformNamespace | quote }}}}
-          podSelector: {matchLabels: {app: ops-api}}
+          podSelector: {matchExpressions: [{key: app, operator: In, values: [ops-api, ops-observability-api]}]}
       ports: [{protocol: TCP, port: 8443}]
 {{- end }}

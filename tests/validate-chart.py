@@ -18,10 +18,18 @@ with tempfile.TemporaryDirectory() as directory:
     candidate = subprocess.check_output([*args, '-f', str(naming)], text=True)
     for expected in ('ops-observability-api', 'ops-observability-worker', 'ops-observability-test-reference'):
         assert f'kind: Deployment\nmetadata:\n  name: {expected}\n' in candidate, expected
-    # Keep Service routing and StatefulSet storage identity stable for this profile.
+    # Workload selectors may change, while Service addresses and StatefulSet identity stay stable.
     def stable_objects(manifest):
-        return [doc for doc in manifest.split('\n---\n') if re.search(r'^kind: (Service|StatefulSet)$', doc, re.M)]
+        objects = []
+        for document in manifest.split('\n---\n'):
+            if re.search(r'^kind: Service$', document, re.M):
+                objects.append(re.sub(r'^  selector: .+\n', '', document, flags=re.M))
+            elif re.search(r'^kind: StatefulSet$', document, re.M):
+                objects.append(document)
+        return objects
     assert stable_objects(legacy) == stable_objects(candidate)
+    for route in ('api', 'worker', 'reference'):
+        assert f'ops.platform/route: {route}' in candidate
     reference = root/'charts/ops-reference'
     reference_values = pathlib.Path(directory)/'reference.json'
     reference_values.write_text(json.dumps({

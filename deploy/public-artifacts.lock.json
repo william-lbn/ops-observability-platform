@@ -60,15 +60,15 @@
   "platformCharts": [
     {
       "name": "ops-platform",
-      "chartVersion": "0.1.0",
-      "archiveSHA256": "f45ed4754f4eccaf008c4d17f1daeb33d0b7fd3150b9abe2b85231ba53a96659",
-      "harborDigest": "sha256:3a73f5d98bec6fd91ed2ab8bc341bc28a19829e80660ce79a05fd18ff856dd72"
+      "chartVersion": "0.1.2",
+      "archiveSHA256": "5e8e8f6dbdde27f9d04958f013bf38cbd39068b823a82270a8688fea86442263",
+      "harborDigest": "sha256:23061129c394a2955860627a65f5165b63f6c84ceafdc48b841c782e26f7cda5"
     },
     {
       "name": "ops-reference",
-      "chartVersion": "0.1.0",
-      "archiveSHA256": "58ac3eb93f18df9a907efe0fa131790e15d5e501747419433d8865af19bd70ff",
-      "harborDigest": "sha256:f80556cbf5a26cb6bc7846114ba96757da32e1e74d4b8fb76c1a4272abab6f65"
+      "chartVersion": "0.1.2",
+      "archiveSHA256": "dc224aee2d988f1a5bee1ce3eb4db79bb85480e4e77d93282d83c1232fcc9e27",
+      "harborDigest": "sha256:a62a335c779aea60b4675c5c795214fd5ecb9625b5bc6db621319a327ce99b89"
     }
   ],
   "offlineBuildTools": {
@@ -81,5 +81,12 @@
       "source.spdx.json": "2926129cb29dcd05a9d964756dfdb6bfc312d52022e25cf1e7acc57740a5a22e"
     }
   },
-  "neonEnabled": false
+  "neonEnabled": false,
+  "namingProfile": {
+    "chartValues": "deploy/profiles/descriptive-names/core.yaml",
+    "collectorRenderer": "tools/harbor-post-renderer.py",
+    "collectorRendererSHA256": "a5254ba5afd1a9cc7c2e647dedd55c2dbcdcf33b4059b733020e88ed63800d60",
+    "collectorSelector": "OPS_COLLECTOR_WORKLOAD_NAMES",
+    "retainsServiceIdentity": true
+  }
 }
