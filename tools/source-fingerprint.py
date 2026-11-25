@@ -11,7 +11,12 @@ paths=[root/'go.mod',root/'go.sum']
 for folder in ('cmd','internal','contracts','web/src'):
     paths.extend(p for p in root.joinpath(folder).rglob('*') if p.is_file())
 paths.extend(root/'web'/name for name in ('package.json','package-lock.json','tsconfig.json'))
-files={p.relative_to(root).as_posix():hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted(set(paths))}
+files={}
+for path in sorted(set(paths)):
+    content=path.read_bytes()
+    if b'\r\n' in content or content.startswith(b'\xef\xbb\xbf'):
+        raise SystemExit('Application input must use canonical UTF-8/LF bytes: '+path.relative_to(root).as_posix())
+    files[path.relative_to(root).as_posix()]=hashlib.sha256(content).hexdigest()
 digest=hashlib.sha256()
 for name,value in sorted(files.items()):digest.update(name.encode()+b'\0'+bytes.fromhex(value))
 identity=digest.hexdigest();version='0.1.0+'+identity[:12]

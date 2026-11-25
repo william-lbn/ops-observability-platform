@@ -32,6 +32,8 @@ function metricValue(data: RecordData, unit: string): string { const values = re
 function card(parent: HTMLElement, title: string, value: string, explain: string) { const c = node('section', '', 'card'); c.append(node('h3', title), node('strong', value), node('p', explain)); parent.append(c); }
 function identityLabel(item:RecordData):HTMLElement{const label=node('div');label.append(node('strong',String(item.name)),node('p','原始身份：'+String(item.uid),'muted'));return label;}
 function snapshotState(item:RecordData):string{const snapshot=obj(item.snapshot);if(item.stale)return '观察已过期；当前状态待确认';if(snapshot.phase){const reasons=array(snapshot.containers).map(c=>c.waitingReason).filter(Boolean);return String(snapshot.phase)+(reasons.length?' · '+reasons.join('、'):' · 仍需结合 Ready 条件与请求体验');}if(item.kind==='kubernetes.node'){const ready=array(snapshot.conditions).find(c=>c.type==='Ready');return ready?.status==='True'?'当前就绪条件满足':'节点就绪条件待核验';}if(item.kind==='kubernetes.namespace.health')return String(snapshot.ready)+' / '+String(snapshot.pods)+' 个 Pod 就绪；异常启动 '+String(snapshot.crashLoops);return '当前仅提供来源观察，请核对证据与时间';}
+function traceDuration(value:unknown):string{const n=numeric(value);return n===null?'列表未提供；可查看明细':n.toFixed(2)+' ms';}
+function spanIdentity(value:unknown):string{const raw=String(value??'');if(/^[a-fA-F0-9]{16}$/.test(raw))return raw;try{const decoded=atob(raw);if(decoded.length===8)return Array.from(decoded,c=>c.charCodeAt(0).toString(16).padStart(2,'0')).join('');}catch{/* Preserve the provided opaque identifier when its encoding is unknown. */}return raw||'来源未提供';}
 function lineChart(parent: HTMLElement, data: RecordData, label: string) {
     const series = results(data);
     const points = series.flatMap(s => Array.isArray(s.values) ? s.values as unknown[][] : []);
@@ -124,7 +126,7 @@ async function traceDetail(parent: HTMLElement, source: RecordData, traceID: str
     for (const batch of array(obj(detail.data).batches || obj(detail.data).resourceSpans))
         for (const scope of array(batch.scopeSpans || batch.instrumentationLibrarySpans))
             spans.push(...array(scope.spans));
-    table(target, ['操作', 'Span ID', '耗时', '结果'], spans.map(span => { const duration = (Number(span.endTimeUnixNano) - Number(span.startTimeUnixNano)) / 1e6; const code = obj(span.status).code; return [String(span.name), String(span.spanId), Number.isFinite(duration) ? duration.toFixed(2) + ' ms' : '未提供', code === 2 || code === 'STATUS_CODE_ERROR' ? '观察到错误' : '按 Span 原始状态核验']; }));
+    table(target, ['操作', 'Span ID', '耗时', '结果'], spans.map(span => { const duration = (Number(span.endTimeUnixNano) - Number(span.startTimeUnixNano)) / 1e6; const code = obj(span.status).code; return [String(span.name), spanIdentity(span.spanId), Number.isFinite(duration) ? duration.toFixed(2) + ' ms' : '未提供', code === 2 || code === 'STATUS_CODE_ERROR' ? '观察到错误' : '按 Span 原始状态核验']; }));
     parent.append(target);
 }
 async function renderLogs(output: HTMLElement, source: RecordData) {
@@ -205,7 +207,7 @@ async function signalView(source: RecordData, current: number) {
         actions.append(button('读取调用链样本', async () => {
             const result = await api('query?' + new URLSearchParams({ source: String(source.id), signal: 'traces' }));
             output.replaceChildren(node('h3', '调用链样本 · ' + (source.kind === 'legacy_archive' ? '保留范围 48 小时' : '最近 15 分钟') + ' · 最多 20 条'));
-            table(output, ['Trace ID', '服务 / 根操作', '耗时', '明细'], array(obj(result.data).traces).map(trace => [String(trace.traceID), String(trace.rootServiceName || '根服务尚未提供') + ' / ' + String(trace.rootTraceName || '根操作尚未提供'), String(trace.durationMs) + ' ms', button('查看调用明细', () => traceDetail(output, source, String(trace.traceID)))]));
+            table(output, ['Trace ID', '服务 / 根操作', '耗时', '明细'], array(obj(result.data).traces).map(trace => [String(trace.traceID), String(trace.rootServiceName || '根服务尚未提供') + ' / ' + String(trace.rootTraceName || '根操作尚未提供'), traceDuration(trace.durationMs), button('查看调用明细', () => traceDetail(output, source, String(trace.traceID)))]));
             output.append(node('p', '当前租户分区内的已观察样本；采样完整性尚未获证明。', 'muted'));
         }));
     p.append(actions, output);
@@ -228,6 +230,7 @@ function table(parent: HTMLElement, columns: string[], rows: (string | HTMLEleme
     }
     const wrap = node('div', '', 'table-wrap');
     const t = node('table');
+    if(columns.length>=4)t.classList.add('wide');
     const head = node('thead');
     const tr = node('tr');
     columns.forEach(c => { const th = node('th', c); th.setAttribute('scope', 'col'); tr.append(th); });

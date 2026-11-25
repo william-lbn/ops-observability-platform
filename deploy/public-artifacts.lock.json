@@ -1,0 +1,85 @@
+{
+  "schemaVersion": 1,
+  "profile": "rke2-local-amd64",
+  "artifactNamespace": "ops-platform",
+  "application": {
+    "version": "0.1.0+8ed0302dd795",
+    "applicationSourceSHA256": "8ed0302dd7955d4172f473dfcbc69ea8e09ca4776d842855b4915fc2646d1ea2",
+    "images": [
+      {
+        "name": "platform",
+        "harborDigest": "sha256:b46a1d7724b0504de0ba41dac2cd3271ba0692fb4f3ffe754359981b3053b1dd",
+        "archiveSHA256": "4f366719bdae428991200ba5d936c21f2eab13069ef65e261b2c966c4c5116ad"
+      },
+      {
+        "name": "reference",
+        "harborDigest": "sha256:bb01a0972a4238491d7f8eded21c6bcd3a39f352732e296917caabbd91ec75e1",
+        "archiveSHA256": "d68d8bdc306a4c852a04bf9104e09c54e5b3c5ec05a2a0d964dc32031513498d"
+      }
+    ],
+    "databaseMigration": 4
+  },
+  "upstreamCharts": [
+    {
+      "name": "prometheus",
+      "chartVersion": "30.0.0",
+      "archiveSHA256": "2e76e9b3c3f770f9c320220500874ce88a9c3c8b2264f42a97cb5d68909b1816",
+      "harborDigest": "sha256:223341e63d0ba899a571f07f49864a4618e9cb9954f971ffe0a7764d4e205e59"
+    },
+    {
+      "name": "loki",
+      "chartVersion": "7.7.0",
+      "archiveSHA256": "174c803546f65879a5b4dac60d2780621fd69bc790c1e66de936046e43ccbc43",
+      "harborDigest": "sha256:0071cd901c004e45a04bf52270ac363a8a707b650a2e305f22d43f55ca249c2f"
+    },
+    {
+      "name": "tempo",
+      "chartVersion": "2.4.0",
+      "archiveSHA256": "fad57f9ddd7d65f46158ee3455d32b7de6b3c1e4a3ce35757d2a8c5b2eb4481b",
+      "harborDigest": "sha256:d1031ade1e56b927ae18515efa8972ff1cc37358b632de1120d00cded6b8897f"
+    },
+    {
+      "name": "grafana",
+      "chartVersion": "14.5.1",
+      "archiveSHA256": "20a2e06456f222bdfbe1d89a198d290223c6e199d42b4560a170fc1a9987f2bd",
+      "harborDigest": "sha256:379d8e41e17cf097a6eee90283b325d74b0f24fd38b9cd9c33ab8f9c27b55cf8"
+    },
+    {
+      "name": "opentelemetry-collector",
+      "chartVersion": "0.183.1",
+      "archiveSHA256": "a81b623f38c1276b499633781135c211a0f4348fff2be47b4bc14e71f75dbcc2",
+      "harborDigest": "sha256:692030f2048e4ef35f5e02c00c6fe4ce169e23ca2dee93a221967c4db55c3eff"
+    },
+    {
+      "name": "dex",
+      "chartVersion": "0.26.0",
+      "archiveSHA256": "3b22c1447935221a040870508274bff85a68b2b841902097d6fcacb3e9badd03",
+      "harborDigest": "sha256:574f0f93f84db79fe5c05594675d28bc80b041a8fae4c6d8fab868b7edf1bf3b"
+    }
+  ],
+  "platformCharts": [
+    {
+      "name": "ops-platform",
+      "chartVersion": "0.1.0",
+      "archiveSHA256": "f45ed4754f4eccaf008c4d17f1daeb33d0b7fd3150b9abe2b85231ba53a96659",
+      "harborDigest": "sha256:3a73f5d98bec6fd91ed2ab8bc341bc28a19829e80660ce79a05fd18ff856dd72"
+    },
+    {
+      "name": "ops-reference",
+      "chartVersion": "0.1.0",
+      "archiveSHA256": "58ac3eb93f18df9a907efe0fa131790e15d5e501747419433d8865af19bd70ff",
+      "harborDigest": "sha256:f80556cbf5a26cb6bc7846114ba96757da32e1e74d4b8fb76c1a4272abab6f65"
+    }
+  ],
+  "offlineBuildTools": {
+    "name": "offline-tools",
+    "harborDigest": "sha256:853d70c416baa2bf6d4a43f524f7c8ebab08004dbadf6741947532f1d5155d6e",
+    "archiveSHA256": "f0b9616b761d82e70a637800cbeb88f62b6bbcb0c46c28ae7481f28c7bf3a42b",
+    "sboms": {
+      "platform.spdx.json": "a5be63376d691b60e4f222331db18ffa224bd598f280037bfefecec0ca306b02",
+      "reference.spdx.json": "9de41976bc816ff0df7676c4edb98c600689ec3e54a03f66c88481fa68ad5747",
+      "source.spdx.json": "2926129cb29dcd05a9d964756dfdb6bfc312d52022e25cf1e7acc57740a5a22e"
+    }
+  },
+  "neonEnabled": false
+}
