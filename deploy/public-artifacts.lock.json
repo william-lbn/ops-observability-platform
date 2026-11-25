@@ -83,7 +83,7 @@
     }
   },
   "visualization": {
-    "grafanaDashboardConfigMap": "ops-platform-resource-dashboards-v2",
+    "grafanaDashboardConfigMap": "ops-platform-resource-dashboards-v3",
     "grafanaDashboardCount": 6,
     "grafanaDefaultLanguage": "zh-Hans"
   },

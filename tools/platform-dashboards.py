@@ -14,7 +14,7 @@ INTERFACE = 'device!="lo",node=~"${node:regex}"'
 UID_PREFIX = "ops-resources-"
 FOLDER = "platform-resources"
 DIRECTORY = f"/var/lib/grafana/dashboards/{FOLDER}"
-VERSION = 2
+VERSION = 3
 CONFIG_MAP = f"ops-platform-resource-dashboards-v{VERSION}"
 
 
@@ -200,12 +200,19 @@ def render(dashboard, datasource_uid):
                           "persistentvolume": "持久卷", "persistentvolumeclaim": "持久卷声明",
                           "phase": "阶段", "condition": "条件", "storageclass": "存储类",
                           "job": "抓取任务", "instance": "抓取端点", "Value": "当前值", "Value #A": "当前值"}
-                base["transformations"] = [{"id": "labelsToFields", "options": {"mode": "columns"}}, {
-                    "id": "organize", "options": {
-                        "excludeByName": {"Time": True, "__name__": True, "ops_tenant": True},
-                        "renameByName": labels,
+                base["transformations"] = [
+                    {"id": "labelsToFields", "options": {"mode": "columns"}},
+                    {"id": "merge", "options": {}},
+                    {
+                        "id": "organize", "options": {
+                            "excludeByName": {"Time": True, "__name__": True, "ops_tenant": True},
+                            "indexByName": {"node": 0, "namespace": 0, "persistentvolume": 0,
+                                            "job": 0, "persistentvolumeclaim": 1, "phase": 1,
+                                            "resource": 1, "instance": 1, "Value": 2, "Value #A": 2},
+                            "renameByName": labels,
+                        },
                     },
-                }]
+                ]
             panels.append(base)
         y += height
     result = {

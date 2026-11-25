@@ -43,8 +43,8 @@ def main():
         for panel in board["panels"]:
             if panel["type"] == "table":
                 transforms = panel["transformations"]
-                assert [transform["id"] for transform in transforms] == ["labelsToFields", "organize"]
-                assert transforms[1]["options"]["renameByName"]["Value"] == "当前值"
+                assert [transform["id"] for transform in transforms] == ["labelsToFields", "merge", "organize"]
+                assert transforms[-1]["options"]["renameByName"]["Value"] == "当前值"
             for target in panel.get("targets", []):
                 assert target["datasource"]["uid"] == UID
                 query = target["expr"].replace("${node:regex}", "")

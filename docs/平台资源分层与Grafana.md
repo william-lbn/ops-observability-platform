@@ -44,4 +44,6 @@ kubectl -n ops-observability port-forward --address 127.0.0.1 svc/ops-grafana 13
 
 真实联合验收应对照：Prometheus 查询结果、Grafana 登录与图表、浏览器实际渲染、平台只读和租户负向、维护观察、镜像及卷身份。升级后另核对 Grafana 首页、面板样本、新旧视觉截图和运行告警。
 
+Grafana 13.3.2 的瞬时向量可以返回多个数据帧。资源表依次展开标签、合并数据帧和整理字段，使不同节点或卷在同一张表中逐行显示。浏览器验收要求多条真实记录同时可见。[Grafana 13.3.2 标签转换实现](https://github.com/grafana/grafana/blob/v13.3.2/packages/grafana-data/src/transformations/transformers/labelsToFields.ts)
+
 `deploy/public-artifacts.lock.json` 记录当前应用制品和 Grafana 配置版本。`application` 对应当前应用源码和镜像，`offlineBuildTools.bundledApplicationSourceSHA256` 标识工具载体内附源码的历史版本。离线构建当前版本时使用本版本源码和已有锁定工具，并校验 `go.mod`、`go.sum`、源码指纹及容器归档摘要。
