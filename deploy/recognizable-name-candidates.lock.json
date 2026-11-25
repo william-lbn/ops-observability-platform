@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "status": "CANDIDATE_RENDERED_NOT_DEPLOYED",
+  "artifactNamespace": "ops-platform",
+  "charts": [
+    {
+      "name": "ops-platform",
+      "chartVersion": "0.1.1",
+      "archiveSHA256": "8460a802314fa0a7c81a1b3c0fa2c341959ecb292f76bd183984c37ff3806d76",
+      "harborDigest": "sha256:c631997e6c6eede1e555c726a62827a7f56e70dd2e7268141f48ac5cf7f20585"
+    },
+    {
+      "name": "ops-reference",
+      "chartVersion": "0.1.1",
+      "archiveSHA256": "4bb0e297333e01ae9a6b31ac9c2f17d7987c4a8ab8cca0d768defae1b3848181",
+      "harborDigest": "sha256:1143dcc0ccebc4106bc8e55a235620b98bd1527f39f263b87ac2cc525225d767"
+    }
+  ],
+  "profiles": "deploy/profiles/descriptive-names",
+  "needsActivationReview": [
+    "Service traffic transition",
+    "tenant TLS and NetworkPolicy validation",
+    "preserve source identity, monitoring and storage bindings"
+  ]
+}

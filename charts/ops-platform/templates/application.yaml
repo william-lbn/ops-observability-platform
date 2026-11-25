@@ -8,7 +8,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: ops-{{ $component }}
+  name: {{ ternary (printf "ops-observability-%s" $component) (printf "ops-%s" $component) (eq $.Values.workloadNaming "descriptive") }}
   labels: {app.kubernetes.io/part-of: ops-observability-platform}
 spec:
   replicas: {{ if eq $component "api" }}{{ $.Values.replicas }}{{ else }}1{{ end }}
@@ -75,7 +75,7 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: ops-reference
+  name: {{ ternary "ops-observability-test-reference" "ops-reference" (eq .Values.workloadNaming "descriptive") }}
   labels: {app.kubernetes.io/part-of: ops-observability-platform}
 spec:
   replicas: 1

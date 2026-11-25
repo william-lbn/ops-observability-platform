@@ -15,6 +15,7 @@ nodePort: 30843
 storageClass: local-path
 databaseStorage: 5Gi
 replicas: 1
+workloadNaming: legacy
 neonEnabled: false
 platformMonitoring:
   enabled: false

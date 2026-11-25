@@ -2,6 +2,6 @@ apiVersion: v2
 name: ops-platform
 description: 独立公共运维可观测平台 API、Worker、PostgreSQL 与真实参考服务
 type: application
-version: 0.1.0
+version: 0.1.1
 appVersion: 0.1.0
 kubeVersion: '>=1.28.0-0'

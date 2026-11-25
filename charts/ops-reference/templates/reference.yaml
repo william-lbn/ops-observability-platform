@@ -1,10 +1,11 @@
 {{- $tenant := required "tenant required" .Values.tenant }}
 {{- $image := required "image.repository required" .Values.image.repository }}
 {{- $digest := required "image.digest required" .Values.image.digest }}
+{{- if not (has .Values.workloadNaming (list "legacy" "descriptive")) }}{{ fail "workloadNaming must be legacy or descriptive" }}{{- end }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: ops-reference
+  name: {{ ternary "ops-observability-test-reference" "ops-reference" (eq .Values.workloadNaming "descriptive") }}
   labels: {app.kubernetes.io/part-of: ops-observability-platform}
 spec:
   replicas: 1

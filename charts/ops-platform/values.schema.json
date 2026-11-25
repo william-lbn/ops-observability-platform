@@ -7,6 +7,7 @@
     "postgresImage": {"$ref": "#/definitions/image"},
     "neonEnabled": {"const": false},
     "replicas": {"type": "integer", "minimum": 1, "maximum": 4},
+    "workloadNaming": {"enum": ["legacy", "descriptive"]},
     "nodePort": {"type": "integer", "minimum": 30000, "maximum": 32767},
     "configSecret": {"type": "string", "minLength": 1},
     "databaseSecret": {"type": "string", "minLength": 1},
