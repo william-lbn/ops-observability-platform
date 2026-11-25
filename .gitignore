@@ -1,0 +1,13 @@
+/vendor/
+/dist/
+/node_modules/
+/web/node_modules/
+/web/dist/
+*.private.*
+*.key
+*.pem
+*.tgz
+*.tar
+*.log
+/site/
+/evidence/private/

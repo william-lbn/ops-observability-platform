@@ -1,0 +1,26 @@
+image:
+  repository: ''
+  digest: ''
+referenceImage:
+  repository: ''
+  digest: ''
+postgresImage:
+  repository: ''
+  digest: ''
+imagePullSecrets: [{name: ops-harbor-pull}]
+configSecret: ops-platform-config
+databaseSecret: ops-database
+tlsSecret: ops-platform-tls
+nodePort: 30843
+storageClass: local-path
+databaseStorage: 5Gi
+replicas: 1
+neonEnabled: false
+platformMonitoring:
+  enabled: false
+networkIsolation:
+  enabled: false
+referenceTelemetry:
+  secretName: ops-reference-otel
+  endpoint: https://ops-collector:4318
+  tls: {enabled: true, secretName: ops-reference-otel-tls}

@@ -1,0 +1,133 @@
+server:
+  fullnameOverride: ops-prometheus
+  global: {scrape_interval: 15s, evaluation_interval: 15s}
+  retention: 48h
+  persistentVolume:
+    size: 8Gi
+  resources:
+    requests: {cpu: 150m, memory: 256Mi}
+    limits: {cpu: '2', memory: 2Gi}
+  extraFlags: [web.enable-lifecycle]
+scrapeConfigs:
+  prometheus: {enabled: false}
+  kubernetes-api-servers: {enabled: false}
+  kubernetes-nodes: {enabled: false}
+  kubernetes-nodes-cadvisor: {enabled: false}
+  kubernetes-service-endpoints: {enabled: false}
+  kubernetes-service-endpoints-slow: {enabled: false}
+  prometheus-pushgateway: {enabled: false}
+  kubernetes-services: {enabled: false}
+  kubernetes-pods: {enabled: false}
+  kubernetes-pods-slow: {enabled: false}
+serverFiles:
+  prometheus.yml:
+    scrape_configs:
+      - job_name: prometheus
+        static_configs: [{targets: ['localhost:9090'], labels: {ops_tenant: platform}}]
+      - job_name: reference-service
+        honor_labels: false
+        static_configs: [{targets: ['ops-reference:8081'], labels: {ops_tenant: platform}}]
+      - job_name: orders-a
+        honor_labels: false
+        static_configs: [{targets: ['ops-reference.ops-tenant-a.svc:8081'], labels: {ops_tenant: tenant-a}}]
+      - job_name: orders-b
+        honor_labels: false
+        static_configs: [{targets: ['ops-reference.ops-tenant-b.svc:8081'], labels: {ops_tenant: tenant-b}}]
+      - job_name: platform
+        static_configs: [{targets: ['ops-api-metrics:9090'], labels: {ops_tenant: platform}}]
+      - job_name: platform-worker
+        static_configs: [{targets: ['ops-worker-metrics:9090'], labels: {ops_tenant: platform}}]
+      - job_name: kube-state-metrics
+        static_configs: [{targets: ['ops-kube-state-metrics:8080'], labels: {ops_tenant: platform}}]
+      - job_name: collectors
+        static_configs: [{targets: ['ops-collector:8888', 'ops-collector-a:8888', 'ops-collector-b:8888'], labels: {ops_tenant: platform}}]
+      - job_name: coredns
+        kubernetes_sd_configs: [{role: pod, namespaces: {names: [kube-system]}}]
+        relabel_configs:
+          - {source_labels: [__meta_kubernetes_pod_label_k8s_app], regex: kube-dns, action: keep}
+          - {source_labels: [__meta_kubernetes_pod_container_port_number], regex: '9153', action: keep}
+          - {source_labels: [__meta_kubernetes_pod_node_name], target_label: node}
+          - {target_label: ops_tenant, replacement: platform}
+      - job_name: infrastructure-logs
+        kubernetes_sd_configs: [{role: endpoints, namespaces: {names: [ops-observability]}}]
+        relabel_configs:
+          - {source_labels: [__meta_kubernetes_service_name], regex: ops-infra-logs, action: keep}
+          - {source_labels: [__meta_kubernetes_endpoint_port_name], regex: metrics, action: keep}
+          - {source_labels: [__meta_kubernetes_endpoint_node_name], target_label: node}
+          - {target_label: ops_tenant, replacement: platform}
+      - job_name: nodes
+        kubernetes_sd_configs: [{role: endpoints, namespaces: {names: [ops-observability]}}]
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_service_name]
+            regex: ops-node-exporter
+            action: keep
+          - {source_labels: [__meta_kubernetes_endpoint_port_name], regex: metrics, action: keep}
+          - {source_labels: [__meta_kubernetes_endpoint_node_name], target_label: node}
+          - {target_label: ops_tenant, replacement: platform}
+  alerting_rules.yml:
+    groups:
+      - name: common-platform
+        rules:
+          - alert: 参考服务不可读取
+            expr: up{job="reference-service"} == 0
+            for: 1m
+            labels: {severity: critical, source: reference-service, ops_tenant: platform}
+            annotations:
+              summary: 参考服务探测失败，请核对服务体验
+              description: 当前探测失败不改变历史请求结果，请检查服务和证据来源。
+          - alert: 参考服务请求失败
+            expr: sum(rate(reference_requests_total{job="reference-service",code="500"}[2m])) > 0
+            for: 30s
+            labels: {severity: warning, source: reference-service, ops_tenant: platform}
+            annotations:
+              summary: 参考服务出现失败请求，请核对影响范围
+          - alert: 租户A参考服务请求失败
+            expr: sum(rate(reference_requests_total{job="orders-a",ops_tenant="tenant-a",code="500"}[2m])) > 0
+            for: 30s
+            labels: {severity: warning, source: orders-a, ops_tenant: tenant-a}
+            annotations: {summary: 订单服务出现失败请求，请核对本租户调用链和时间范围}
+          - alert: 租户B参考服务请求失败
+            expr: sum(rate(reference_requests_total{job="orders-b",ops_tenant="tenant-b",code="500"}[2m])) > 0
+            for: 30s
+            labels: {severity: warning, source: orders-b, ops_tenant: tenant-b}
+            annotations: {summary: 订单服务出现失败请求，请核对本租户调用链和时间范围}
+          - alert: 平台节点就绪条件异常
+            expr: kube_node_status_condition{condition="Ready",status="true",ops_tenant="platform"} == 0
+            for: 1m
+            labels: {severity: critical, source: cluster-platform, ops_tenant: platform}
+            annotations: {summary: 节点就绪条件异常，请核对节点压力和租户影响}
+          - alert: 平台节点文件系统空间不足
+            expr: (1-node_filesystem_avail_bytes{ops_tenant="platform",fstype!~"tmpfs|overlay|squashfs"}/node_filesystem_size_bytes{ops_tenant="platform",fstype!~"tmpfs|overlay|squashfs"}) > 0.85
+            for: 5m
+            labels: {severity: warning, source: cluster-platform, ops_tenant: platform}
+            annotations: {summary: 节点文件系统使用率持续偏高，请核对容量和增长来源}
+          - alert: 平台Worker采集周期未完成
+            expr: time()-ops_worker_last_success_timestamp_seconds{ops_tenant="platform"} > 90
+            for: 30s
+            labels: {severity: warning, source: cluster-platform, ops_tenant: platform}
+            annotations: {summary: 采集周期持续未完整完成，请先检查来源质量和后端链路}
+          - alert: 采集后端投递持续失败
+            expr: sum(rate(otelcol_exporter_send_failed_log_records_total{ops_tenant="platform"}[2m])) > 0
+            for: 30s
+            labels: {severity: warning, source: collectors, ops_tenant: platform}
+            annotations: {summary: 采集端仍可能可达，但日志投递失败；请核对后端、队列和缺口}
+          - alert: 平台副本创建条件异常
+            expr: kube_deployment_status_condition{condition="ReplicaFailure",status="true",ops_tenant="platform"} == 1
+            for: 30s
+            labels: {severity: warning, source: cluster-platform, ops_tenant: platform}
+            annotations: {summary: 控制器报告副本创建异常，请比较配额余量与滚动更新需求}
+alertmanager:
+  enabled: true
+  fullnameOverride: ops-alertmanager
+  persistence: {size: 1Gi}
+kube-state-metrics:
+  fullnameOverride: ops-kube-state-metrics
+  namespaces: ''
+  collectors: [nodes, namespaces, pods, deployments, daemonsets, statefulsets, persistentvolumes, persistentvolumeclaims, services, endpoints]
+prometheus-node-exporter:
+  fullnameOverride: ops-node-exporter
+  resources:
+    requests: {cpu: 25m, memory: 32Mi}
+    limits: {cpu: 250m, memory: 128Mi}
+prometheus-pushgateway:
+  enabled: false

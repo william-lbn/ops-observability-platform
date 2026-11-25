@@ -1,0 +1,30 @@
+fullnameOverride: ops-grafana
+automountServiceAccountToken: false
+rbac: {create: false}
+admin:
+  existingSecret: ops-grafana-admin
+  userKey: username
+  passwordKey: password
+initChownData: {enabled: false}
+persistence: {enabled: true, size: 2Gi}
+deploymentStrategy: {type: Recreate}
+testFramework: {enabled: false}
+grafana.ini:
+  users: {default_language: zh-CN, allow_sign_up: false}
+  auth.anonymous: {enabled: false}
+  analytics: {reporting_enabled: false, check_for_updates: false}
+  security: {disable_gravatar: true, cookie_samesite: strict}
+  plugins: {preinstall_disabled: true, public_key_retrieval_disabled: true, check_for_updates: false}
+env:
+  GF_PLUGINS_PREINSTALL_DISABLED: 'true'
+  GF_PLUGINS_PUBLIC_KEY_RETRIEVAL_DISABLED: 'true'
+datasources:
+  datasources.yaml:
+    apiVersion: 1
+    datasources:
+      - {name: 公共指标, type: prometheus, access: proxy, url: 'http://ops-prometheus', isDefault: true}
+      - {name: 平台日志, type: loki, access: proxy, url: 'http://ops-loki:3100', jsonData: {httpHeaderName1: X-Scope-OrgID}, secureJsonData: {httpHeaderValue1: platform}}
+      - {name: 平台调用链, type: tempo, access: proxy, url: 'http://ops-tempo:3200', jsonData: {httpHeaderName1: X-Scope-OrgID}, secureJsonData: {httpHeaderValue1: platform}}
+resources:
+  requests: {cpu: 100m, memory: 128Mi}
+  limits: {cpu: '1', memory: 512Mi}

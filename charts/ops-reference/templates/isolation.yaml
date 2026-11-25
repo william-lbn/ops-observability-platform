@@ -1,0 +1,28 @@
+{{- if .Values.networkIsolation.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: {name: ops-tenant-isolation}
+spec:
+  podSelector: {}
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - from:
+        - podSelector: {}
+        - namespaceSelector: {matchLabels: {kubernetes.io/metadata.name: {{ .Values.platformNamespace | quote }}}}
+      ports: [{protocol: TCP, port: 8081}]
+  egress:
+    - to:
+        - namespaceSelector: {matchLabels: {kubernetes.io/metadata.name: kube-system}}
+          podSelector: {matchLabels: {k8s-app: kube-dns}}
+      ports: [{protocol: UDP, port: 53}, {protocol: TCP, port: 53}]
+    - to: [{podSelector: {}}]
+      ports: [{protocol: TCP, port: 8081}]
+    - to:
+        - namespaceSelector: {matchLabels: {kubernetes.io/metadata.name: {{ .Values.platformNamespace | quote }}}}
+          podSelector: {matchLabels: {app.kubernetes.io/instance: {{ required "collectorRelease required" .Values.collectorRelease | quote }}}}
+      ports: [{protocol: TCP, port: 4318}]
+    - to:
+        - namespaceSelector: {matchLabels: {kubernetes.io/metadata.name: {{ .Values.platformNamespace | quote }}}}
+          podSelector: {matchLabels: {app: ops-api}}
+      ports: [{protocol: TCP, port: 8443}]
+{{- end }}

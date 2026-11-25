@@ -1,0 +1,31 @@
+{{- if .Values.platformMonitoring.enabled }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ .Release.Namespace }}-platform-inventory-reader
+  labels: {app.kubernetes.io/part-of: ops-observability-platform}
+rules:
+  - apiGroups: ['']
+    resources: [nodes, namespaces, pods, services, endpoints, events, persistentvolumes, persistentvolumeclaims, resourcequotas]
+    verbs: [get, list]
+  - apiGroups: [apps]
+    resources: [deployments, replicasets, daemonsets, statefulsets]
+    verbs: [get, list]
+  - apiGroups: [metrics.k8s.io]
+    resources: [nodes, pods]
+    verbs: [get, list]
+  - apiGroups: [storage.k8s.io]
+    resources: [storageclasses]
+    verbs: [get, list]
+  - nonResourceURLs: [/readyz, /livez, /healthz]
+    verbs: [get]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ .Release.Namespace }}-platform-inventory-reader
+subjects:
+  - {kind: ServiceAccount, name: ops-worker, namespace: {{ .Release.Namespace }}}
+roleRef:
+  {apiGroup: rbac.authorization.k8s.io, kind: ClusterRole, name: {{ .Release.Namespace }}-platform-inventory-reader}
+{{- end }}

@@ -1,0 +1,9 @@
+name: ops-harbor-renderer
+version: 0.1.0
+type: postrenderer/v1
+apiVersion: v1
+runtime: subprocess
+runtimeConfig:
+  platformCommand:
+    - os: linux
+      command: ${HELM_PLUGIN_DIR}/render.sh

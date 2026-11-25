@@ -1,0 +1,10 @@
+tenant: ''
+image: {repository: '', digest: ''}
+serviceName: orders
+collectorEndpoint: ''
+otelSecret: ops-reference-otel
+imagePullSecrets: [{name: ops-harbor-pull}]
+platformNamespace: ops-observability
+collectorRelease: ''
+networkIsolation: {enabled: false}
+tls: {enabled: true, secretName: ops-reference-otel-tls}

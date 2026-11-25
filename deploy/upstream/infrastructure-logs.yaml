@@ -1,0 +1,74 @@
+fullnameOverride: ops-infra-logs
+mode: daemonset
+image: {repository: otel/opentelemetry-collector-contrib, tag: 0.165.0}
+command: {name: otelcol-contrib}
+service: {enabled: true}
+serviceAccount: {create: true, automountServiceAccountToken: false}
+clusterRole: {create: false}
+securityContext: {runAsUser: 0, runAsNonRoot: false, readOnlyRootFilesystem: true, allowPrivilegeEscalation: false, capabilities: {drop: [ALL]}}
+resources:
+  requests: {cpu: 50m, memory: 96Mi}
+  limits: {cpu: 500m, memory: 256Mi}
+tolerations: [{operator: Exists, effect: NoSchedule}]
+ports:
+  otlp: {enabled: false}
+  otlp-http: {enabled: false}
+  jaeger-compact: {enabled: false}
+  jaeger-thrift: {enabled: false}
+  jaeger-grpc: {enabled: false}
+  zipkin: {enabled: false}
+  metrics: {enabled: true, containerPort: 8888, servicePort: 8888}
+extraVolumes:
+  - {name: pod-logs, hostPath: {path: /var/log/pods, type: Directory}}
+  - {name: state, emptyDir: {sizeLimit: 64Mi}}
+extraVolumeMounts:
+  - {name: pod-logs, mountPath: /var/log/pods, readOnly: true}
+  - {name: state, mountPath: /var/lib/otel-state}
+config:
+  extensions:
+    file_storage: {directory: /var/lib/otel-state}
+  receivers:
+    otlp: null
+    jaeger: null
+    zipkin: null
+    prometheus: null
+    filelog:
+      include: [/var/log/pods/kube-system_*/*/*.log, /var/log/pods/cert-manager_*/*/*.log]
+      start_at: end
+      include_file_path: true
+      max_log_size: 16KiB
+      max_log_size_behavior: truncate
+      max_concurrent_files: 64
+      max_batches: 4
+      storage: file_storage
+      retry_on_failure: {enabled: true, max_elapsed_time: 60s}
+      operators: [{type: container, id: container-parser}]
+  processors:
+    memory_limiter: {check_interval: 1s, limit_mib: 200, spike_limit_mib: 40}
+    batch: {send_batch_size: 128, timeout: 2s}
+    resource/identity:
+      attributes:
+        - {key: service.name, value: kubernetes-infrastructure, action: upsert}
+        - {key: ops.tenant.id, value: platform, action: upsert}
+        - {key: ops.source.id, value: infrastructure-logs, action: upsert}
+    transform/privacy:
+      error_mode: propagate
+      log_statements:
+        - context: log
+          statements:
+            - 'keep_keys(attributes, ["log.file.path", "log.iostream", "k8s.namespace.name", "k8s.pod.uid", "k8s.container.name"])'
+            - 'replace_pattern(body, "(?i)authorization[[:space:]]*[:=][^,;]*", "[已脱敏授权]") where IsString(body)'
+            - 'replace_pattern(body, "(?i)(authorization|password|secret|access_token|refresh_token)[[:space:]]*[:=][[:space:]]*[^[:space:],;]+", "[已脱敏凭据]") where IsString(body)'
+  exporters:
+    debug: null
+    otlphttp/loki:
+      endpoint: http://ops-loki:3100/otlp
+      headers: {X-Scope-OrgID: platform}
+      sending_queue: {enabled: true, queue_size: 128}
+      retry_on_failure: {enabled: true, max_elapsed_time: 60s}
+  service:
+    extensions: [health_check, file_storage]
+    pipelines:
+      traces: null
+      metrics: null
+      logs: {receivers: [filelog], processors: [memory_limiter, resource/identity, transform/privacy, batch], exporters: [otlphttp/loki]}

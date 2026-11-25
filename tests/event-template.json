@@ -1,0 +1,72 @@
+{
+  "schemaVersion": "1.0",
+  "eventId": "00000000-0000-4000-8000-000000000031",
+  "sourceInstance": "source-fixture-orders",
+  "entityRef": {
+    "sourceInstance": "source-fixture-orders",
+    "kind": "workload.service",
+    "nativeId": "orders/checkout",
+    "incarnation": "service-demo-v1",
+    "incarnationStatus": "known"
+  },
+  "eventKind": "workload.snapshot.observed",
+  "signalKind": "snapshot",
+  "occurredAt": null,
+  "observedAt": "2026-11-24T12:00:00+08:00",
+  "timeBasis": "source_observation",
+  "origin": {
+    "providerId": "generic-fixture",
+    "providerVersion": "0.1.0-design",
+    "profileId": "generic.workload.snapshot",
+    "profileVersion": "1.0",
+    "mapperVersion": "1.0-fixture",
+    "transport": "file_fixture",
+    "sampling": "not_sampled",
+    "nativeEventRef": null
+  },
+  "operationBinding": {
+    "state": "correlation_only",
+    "operationRef": {
+      "sourceInstance": "source-fixture-orders",
+      "kind": "operation.intent",
+      "nativeId": "capacity-request-demo-001",
+      "incarnation": null,
+      "incarnationStatus": "unknown"
+    },
+    "bindingProofRef": null
+  },
+  "reliability": {
+    "deliveryClass": "best_effort",
+    "evidenceProfileRef": null,
+    "sourceCoverage": {
+      "sourceInstance": "source-fixture-orders",
+      "scopeKind": "source_stream",
+      "status": "partial",
+      "streamSetVersion": "fixture-streams-v1",
+      "expectedStreams": [
+        "polling-observations"
+      ],
+      "observedStreams": [
+        "polling-observations"
+      ],
+      "asOf": "2026-11-24T12:00:00+08:00",
+      "coveredFrom": "2026-11-24T11:59:00+08:00",
+      "coveredThrough": null,
+      "proof": null
+    }
+  },
+  "payload": {
+    "displayName": "订单结算服务",
+    "requestedFromReplicas": 4,
+    "requestedToReplicas": 6,
+    "observedReadyReplicas": 6,
+    "operationEffectAttribution": "unknown",
+    "lastSyntheticRequestProbe": "recently_available",
+    "meaning": "当前快照6个就绪不证明原操作完成；最近探针成功不证明业务历史完整。"
+  },
+  "exampleMetadata": {
+    "synthetic": true,
+    "runtimeQualification": "NOT_RUN",
+    "notice": "仅为本地合同与UI演示；全部来源、能力、状态与原生引用均非真实运行证据。"
+  }
+}

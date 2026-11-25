@@ -1,0 +1,1171 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.example.invalid/ops-observability/core/v1/provider_manifest.schema.json",
+  "title": "Provider manifest / registry read model v1 — proposal",
+  "description": "expected由profile声明，observed由实际probe产生，qualified由平台资格登记确认；manifest是组合读模型，不能信任Provider自行填写QUALIFIED。平台F3资格不等于某来源I0/I1/I2资格。",
+  "type": "object",
+  "properties": {
+    "manifestVersion": {
+      "const": "1.0"
+    },
+    "providerId": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9]*(?:[._/-][a-z0-9]+)*$",
+      "maxLength": 128
+    },
+    "providerVersion": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "coreContractVersion": {
+      "const": "1.0"
+    },
+    "mappingProfile": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9]*(?:[._/-][a-z0-9]+)*$",
+          "maxLength": 128
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "mapperVersion": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "nativeAuthority": {
+          "const": "original_provider"
+        }
+      },
+      "required": [
+        "id",
+        "version",
+        "mapperVersion",
+        "nativeAuthority"
+      ],
+      "additionalProperties": false
+    },
+    "sourceInstance": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "nativeEntityKinds": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9]*(?:[._/-][a-z0-9]+)*$",
+        "maxLength": 128
+      },
+      "minItems": 0,
+      "maxItems": 128,
+      "uniqueItems": true
+    },
+    "nativeIdentityRefs": {
+      "type": "array",
+      "items": {
+        "$ref": "entity_ref.schema.json"
+      },
+      "minItems": 0,
+      "maxItems": 128
+    },
+    "deploymentIntent": {
+      "type": "string",
+      "enum": [
+        "disabled",
+        "contract_test",
+        "integration_test",
+        "production"
+      ]
+    },
+    "integrationStage": {
+      "type": "string",
+      "enum": [
+        "NOT_STARTED",
+        "I0",
+        "I1",
+        "I2"
+      ]
+    },
+    "enabled": {
+      "type": "boolean",
+      "default": false
+    },
+    "authorizationBinding": {
+      "type": "object",
+      "properties": {
+        "owner": {
+          "const": "platform_registry"
+        },
+        "state": {
+          "type": "string",
+          "enum": [
+            "unbound",
+            "bound"
+          ]
+        },
+        "bindingRef": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 1024
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "owner",
+        "state",
+        "bindingRef"
+      ],
+      "additionalProperties": false
+    },
+    "writePolicy": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false
+        },
+        "defaultDeny": {
+          "const": true
+        },
+        "actionAuthority": {
+          "const": "native_provider_only"
+        },
+        "approvalProfileRef": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 1024
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "enabled",
+        "defaultDeny",
+        "actionAuthority",
+        "approvalProfileRef"
+      ],
+      "additionalProperties": false
+    },
+    "claimOwners": {
+      "type": "object",
+      "properties": {
+        "expected": {
+          "const": "provider_profile_owner"
+        },
+        "observed": {
+          "const": "probe_record_owner"
+        },
+        "qualified": {
+          "const": "platform_qualification_registry"
+        }
+      },
+      "required": [
+        "expected",
+        "observed",
+        "qualified"
+      ],
+      "additionalProperties": false
+    },
+    "capabilities": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/capability"
+      },
+      "minItems": 1,
+      "maxItems": 128
+    },
+    "sourceCoverage": {
+      "$ref": "#/$defs/sourceCoverage"
+    },
+    "exampleMetadata": {
+      "$ref": "#/$defs/exampleMetadata"
+    }
+  },
+  "required": [
+    "manifestVersion",
+    "providerId",
+    "providerVersion",
+    "coreContractVersion",
+    "mappingProfile",
+    "sourceInstance",
+    "nativeEntityKinds",
+    "nativeIdentityRefs",
+    "deploymentIntent",
+    "integrationStage",
+    "enabled",
+    "authorizationBinding",
+    "writePolicy",
+    "claimOwners",
+    "capabilities",
+    "sourceCoverage"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "watermark": {
+      "type": "object",
+      "properties": {
+        "streamId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "producerIncarnation": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "sourceCommittedSeq": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]*)$",
+          "maxLength": 40
+        },
+        "receivedHighestSeq": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^(0|[1-9][0-9]*)$",
+              "maxLength": 40
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "receivedContiguousSeq": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^(0|[1-9][0-9]*)$",
+              "maxLength": 40
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "sealedSeq": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^(0|[1-9][0-9]*)$",
+              "maxLength": 40
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "streamId",
+        "producerIncarnation",
+        "sourceCommittedSeq",
+        "receivedHighestSeq",
+        "receivedContiguousSeq",
+        "sealedSeq"
+      ],
+      "additionalProperties": false
+    },
+    "coverageProof": {
+      "type": "object",
+      "properties": {
+        "profileRef": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "qualificationRef": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "sourceRegistryRef": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "proofRef": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1024
+        },
+        "watermarks": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/watermark"
+          },
+          "minItems": 1,
+          "maxItems": 128
+        },
+        "requiredEvidenceState": {
+          "type": "string",
+          "enum": [
+            "verified",
+            "pending",
+            "missing",
+            "corrupt",
+            "unknown"
+          ]
+        },
+        "expectedSetVerified": {
+          "type": "boolean"
+        },
+        "conflictsClear": {
+          "type": "boolean"
+        },
+        "closed": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "profileRef",
+        "qualificationRef",
+        "sourceRegistryRef",
+        "proofRef",
+        "watermarks",
+        "requiredEvidenceState",
+        "expectedSetVerified",
+        "conflictsClear",
+        "closed"
+      ],
+      "additionalProperties": false,
+      "description": "仅证据声明形状；真实性、来源集合、序号比较、附件耐久和资格登记由服务端核验，不接受调用方自报通过。"
+    },
+    "sourceCoverage": {
+      "type": "object",
+      "properties": {
+        "sourceInstance": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "scopeKind": {
+          "type": "string",
+          "enum": [
+            "source_stream",
+            "source_interval",
+            "entity_operation"
+          ]
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "not_started",
+            "unsupported",
+            "unknown",
+            "partial",
+            "verified_prefix",
+            "complete_closed"
+          ]
+        },
+        "streamSetVersion": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "expectedStreams": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "minItems": 0,
+          "maxItems": 128,
+          "uniqueItems": true
+        },
+        "observedStreams": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "minItems": 0,
+          "maxItems": 128,
+          "uniqueItems": true
+        },
+        "asOf": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "date-time"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "coveredFrom": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "date-time"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "coveredThrough": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "date-time"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "proof": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/coverageProof"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "sourceInstance",
+        "scopeKind",
+        "status",
+        "streamSetVersion",
+        "expectedStreams",
+        "observedStreams",
+        "asOf",
+        "coveredFrom",
+        "coveredThrough",
+        "proof"
+      ],
+      "additionalProperties": false,
+      "description": "来源级覆盖；不能从单个Collector健康或平台F3资格推导所有Provider完整。",
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "enum": [
+                  "verified_prefix",
+                  "complete_closed"
+                ]
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          "then": {
+            "properties": {
+              "asOf": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "streamSetVersion": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              },
+              "expectedStreams": {
+                "minItems": 1
+              },
+              "observedStreams": {
+                "minItems": 1
+              },
+              "proof": {
+                "type": "object",
+                "properties": {
+                  "requiredEvidenceState": {
+                    "const": "verified"
+                  },
+                  "expectedSetVerified": {
+                    "const": true
+                  },
+                  "conflictsClear": {
+                    "const": true
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "complete_closed"
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          "then": {
+            "properties": {
+              "coveredThrough": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "proof": {
+                "type": "object",
+                "properties": {
+                  "closed": {
+                    "const": true
+                  },
+                  "watermarks": {
+                    "items": {
+                      "properties": {
+                        "sealedSeq": {
+                          "type": "string",
+                          "pattern": "^(0|[1-9][0-9]*)$",
+                          "maxLength": 40
+                        },
+                        "receivedContiguousSeq": {
+                          "type": "string",
+                          "pattern": "^(0|[1-9][0-9]*)$",
+                          "maxLength": 40
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "expectedCapability": {
+      "type": "object",
+      "properties": {
+        "support": {
+          "type": "string",
+          "enum": [
+            "required",
+            "optional",
+            "not_expected"
+          ]
+        },
+        "minimumIntegrationStage": {
+          "type": "string",
+          "enum": [
+            "I0",
+            "I1",
+            "I2"
+          ]
+        },
+        "declaredProfileVersion": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        }
+      },
+      "required": [
+        "support",
+        "minimumIntegrationStage",
+        "declaredProfileVersion"
+      ],
+      "additionalProperties": false
+    },
+    "observedCapability": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "NOT_PROBED",
+            "SUPPORTED",
+            "UNSUPPORTED",
+            "UNKNOWN"
+          ]
+        },
+        "observedAt": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "date-time"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "probeProfileRef": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "evidenceRefs": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1024
+          },
+          "minItems": 0,
+          "maxItems": 128
+        }
+      },
+      "required": [
+        "status",
+        "observedAt",
+        "probeProfileRef",
+        "evidenceRefs"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "enum": [
+                  "SUPPORTED",
+                  "UNSUPPORTED"
+                ]
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          "then": {
+            "properties": {
+              "observedAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "probeProfileRef": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              },
+              "evidenceRefs": {
+                "minItems": 1
+              }
+            }
+          }
+        }
+      ]
+    },
+    "qualifiedCapability": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "NOT_RUN",
+            "QUALIFIED",
+            "REJECTED",
+            "EXPIRED"
+          ]
+        },
+        "integrationStage": {
+          "anyOf": [
+            {
+              "type": "string",
+              "enum": [
+                "I0",
+                "I1",
+                "I2"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "scopeRef": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 1024
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "evaluatedAt": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "date-time"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "validUntil": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "date-time"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "evidenceRefs": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1024
+          },
+          "minItems": 0,
+          "maxItems": 128
+        }
+      },
+      "required": [
+        "status",
+        "integrationStage",
+        "scopeRef",
+        "evaluatedAt",
+        "validUntil",
+        "evidenceRefs"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "QUALIFIED"
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          "then": {
+            "properties": {
+              "integrationStage": {
+                "type": "string",
+                "enum": [
+                  "I0",
+                  "I1",
+                  "I2"
+                ]
+              },
+              "scopeRef": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 1024
+              },
+              "evaluatedAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "validUntil": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "evidenceRefs": {
+                "minItems": 1
+              }
+            }
+          }
+        }
+      ]
+    },
+    "capability": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9]*(?:[._/-][a-z0-9]+)*$",
+          "maxLength": 128
+        },
+        "access": {
+          "type": "string",
+          "enum": [
+            "read",
+            "write"
+          ]
+        },
+        "expected": {
+          "$ref": "#/$defs/expectedCapability"
+        },
+        "observed": {
+          "$ref": "#/$defs/observedCapability"
+        },
+        "qualified": {
+          "$ref": "#/$defs/qualifiedCapability"
+        },
+        "enabled": {
+          "type": "boolean",
+          "default": false
+        }
+      },
+      "required": [
+        "id",
+        "access",
+        "expected",
+        "observed",
+        "qualified",
+        "enabled"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "qualified": {
+                "properties": {
+                  "status": {
+                    "const": "QUALIFIED"
+                  }
+                },
+                "required": [
+                  "status"
+                ]
+              }
+            },
+            "required": [
+              "qualified"
+            ]
+          },
+          "then": {
+            "properties": {
+              "observed": {
+                "properties": {
+                  "status": {
+                    "const": "SUPPORTED"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "access": {
+                "const": "write"
+              },
+              "enabled": {
+                "const": true
+              }
+            },
+            "required": [
+              "access",
+              "enabled"
+            ]
+          },
+          "then": {
+            "properties": {
+              "qualified": {
+                "properties": {
+                  "status": {
+                    "const": "QUALIFIED"
+                  },
+                  "integrationStage": {
+                    "const": "I2"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "expected": {
+                "properties": {
+                  "support": {
+                    "const": "not_expected"
+                  }
+                },
+                "required": [
+                  "support"
+                ]
+              }
+            },
+            "required": [
+              "expected"
+            ]
+          },
+          "then": {
+            "properties": {
+              "enabled": {
+                "const": false
+              }
+            }
+          }
+        }
+      ]
+    },
+    "exampleMetadata": {
+      "type": "object",
+      "properties": {
+        "synthetic": {
+          "const": true
+        },
+        "runtimeQualification": {
+          "const": "NOT_RUN"
+        },
+        "notice": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2048
+        }
+      },
+      "required": [
+        "synthetic",
+        "runtimeQualification",
+        "notice"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "enabled": {
+            "const": false
+          }
+        },
+        "required": [
+          "enabled"
+        ]
+      },
+      "then": {
+        "properties": {
+          "writePolicy": {
+            "properties": {
+              "enabled": {
+                "const": false
+              }
+            }
+          },
+          "capabilities": {
+            "items": {
+              "properties": {
+                "enabled": {
+                  "const": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "deploymentIntent": {
+            "const": "disabled"
+          }
+        },
+        "required": [
+          "deploymentIntent"
+        ]
+      },
+      "then": {
+        "properties": {
+          "enabled": {
+            "const": false
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "enabled": {
+            "const": true
+          }
+        },
+        "required": [
+          "enabled"
+        ]
+      },
+      "then": {
+        "properties": {
+          "authorizationBinding": {
+            "properties": {
+              "state": {
+                "const": "bound"
+              },
+              "bindingRef": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 1024
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "deploymentIntent": {
+            "const": "production"
+          },
+          "enabled": {
+            "const": true
+          }
+        },
+        "required": [
+          "deploymentIntent",
+          "enabled"
+        ]
+      },
+      "then": {
+        "properties": {
+          "capabilities": {
+            "items": {
+              "if": {
+                "properties": {
+                  "enabled": {
+                    "const": true
+                  }
+                },
+                "required": [
+                  "enabled"
+                ]
+              },
+              "then": {
+                "properties": {
+                  "observed": {
+                    "properties": {
+                      "status": {
+                        "const": "SUPPORTED"
+                      }
+                    }
+                  },
+                  "qualified": {
+                    "properties": {
+                      "status": {
+                        "const": "QUALIFIED"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "writePolicy": {
+            "properties": {
+              "enabled": {
+                "const": true
+              }
+            },
+            "required": [
+              "enabled"
+            ]
+          }
+        },
+        "required": [
+          "writePolicy"
+        ]
+      },
+      "then": {
+        "properties": {
+          "enabled": {
+            "const": true
+          },
+          "integrationStage": {
+            "const": "I2"
+          },
+          "deploymentIntent": {
+            "enum": [
+              "integration_test",
+              "production"
+            ]
+          },
+          "writePolicy": {
+            "properties": {
+              "approvalProfileRef": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 1024
+              }
+            }
+          },
+          "capabilities": {
+            "contains": {
+              "properties": {
+                "id": {
+                  "const": "actions.execute"
+                },
+                "access": {
+                  "const": "write"
+                },
+                "enabled": {
+                  "const": true
+                },
+                "qualified": {
+                  "properties": {
+                    "status": {
+                      "const": "QUALIFIED"
+                    },
+                    "integrationStage": {
+                      "const": "I2"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "integrationStage"
+                  ]
+                }
+              },
+              "required": [
+                "id",
+                "access",
+                "enabled",
+                "qualified"
+              ]
+            }
+          }
+        }
+      }
+    }
+  ]
+}

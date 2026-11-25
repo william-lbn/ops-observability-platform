@@ -1,0 +1,82 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.example.invalid/ops-observability/core/v1/entity_ref.schema.json",
+  "title": "Generic Core entityRef v1 — proposal",
+  "description": "通用来源命名空间内的实体引用；不要求PG/VM/Host。sourceInstance是平台注册表标识，不是平台租户、Cluster UID或Neon tenant。身份字段不授予访问权。",
+  "type": "object",
+  "properties": {
+    "sourceInstance": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "kind": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9]*(?:[._/-][a-z0-9]+)*$",
+      "maxLength": 128
+    },
+    "nativeId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 1024
+    },
+    "incarnation": {
+      "anyOf": [
+        {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "incarnationStatus": {
+      "type": "string",
+      "enum": [
+        "known",
+        "unknown",
+        "not_applicable"
+      ]
+    }
+  },
+  "required": [
+    "sourceInstance",
+    "kind",
+    "nativeId",
+    "incarnation",
+    "incarnationStatus"
+  ],
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "incarnationStatus": {
+            "const": "known"
+          }
+        },
+        "required": [
+          "incarnationStatus"
+        ]
+      },
+      "then": {
+        "properties": {
+          "incarnation": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "incarnation": {
+            "type": "null"
+          }
+        }
+      }
+    }
+  ]
+}

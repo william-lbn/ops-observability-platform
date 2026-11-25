@@ -1,0 +1,91 @@
+fullnameOverride: ops-collector
+mode: deployment
+image:
+  repository: otel/opentelemetry-collector-contrib
+  tag: 0.165.0
+command: {name: otelcol-contrib}
+serviceAccount: {automountServiceAccountToken: false}
+podSecurityContext: {runAsNonRoot: true, runAsUser: 10001, runAsGroup: 10001, fsGroup: 10001, seccompProfile: {type: RuntimeDefault}}
+securityContext: {readOnlyRootFilesystem: true, allowPrivilegeEscalation: false, capabilities: {drop: [ALL]}}
+resources:
+  requests: {cpu: 100m, memory: 128Mi}
+  limits: {cpu: '1', memory: 512Mi}
+ports:
+  jaeger-compact: {enabled: false}
+  jaeger-thrift: {enabled: false}
+  jaeger-grpc: {enabled: false}
+  zipkin: {enabled: false}
+  otlp: {enabled: false}
+  metrics: {enabled: true, containerPort: 8888, servicePort: 8888}
+extraVolumes:
+  - {name: ingest-auth, secret: {secretName: ops-collector-auth}}
+  - {name: ingest-tls, secret: {secretName: ops-collector-tls, defaultMode: 0440}}
+extraVolumeMounts:
+  - {name: ingest-auth, mountPath: /etc/otel-auth, readOnly: true}
+  - {name: ingest-tls, mountPath: /etc/otel-tls, readOnly: true}
+config:
+  extensions:
+    basicauth/server: {htpasswd: {file: /etc/otel-auth/htpasswd}}
+  receivers:
+    jaeger: null
+    zipkin: null
+    prometheus: null
+    otlp:
+      protocols:
+        grpc: null
+        http:
+          endpoint: '0.0.0.0:4318'
+          max_request_body_size: 1048576
+          auth: {authenticator: basicauth/server}
+          tls: {cert_file: /etc/otel-tls/tls.crt, key_file: /etc/otel-tls/tls.key, client_ca_file: /etc/otel-tls/ca.crt, min_version: '1.2'}
+  processors:
+    memory_limiter:
+      check_interval: 1s
+      limit_mib: 400
+      spike_limit_mib: 80
+    batch: {send_batch_size: 256, timeout: 2s}
+    attributes/privacy:
+      actions:
+        - {key: authorization, action: delete}
+        - {key: cookie, action: delete}
+        - {key: db.statement, action: delete}
+    resource/security-domain:
+      attributes:
+        - {key: ops.tenant.id, value: platform, action: upsert}
+        - {key: ops.source.id, value: reference-service, action: upsert}
+    transform/privacy:
+      error_mode: propagate
+      trace_statements:
+        - context: resource
+          statements:
+            - 'keep_keys(attributes, ["service.name", "service.version", "service.instance.id", "deployment.environment.name", "ops.tenant.id", "ops.source.id"])'
+        - context: span
+          statements:
+            - 'keep_keys(attributes, ["http.request.method", "http.response.status_code", "error.type"])'
+      log_statements:
+        - context: resource
+          statements:
+            - 'keep_keys(attributes, ["service.name", "service.version", "service.instance.id", "deployment.environment.name", "ops.tenant.id", "ops.source.id"])'
+        - context: log
+          statements:
+            - 'keep_keys(attributes, ["log.iostream", "k8s.namespace.name", "k8s.pod.uid", "k8s.container.name"])'
+            - 'replace_pattern(body, "(?i)authorization[[:space:]]*[:=][^,;]*", "[已脱敏授权]") where IsString(body)'
+            - 'replace_pattern(body, "(?i)(authorization|password|secret|access_token|refresh_token)[[:space:]]*[:=][[:space:]]*[^[:space:],;]+", "[已脱敏凭据]") where IsString(body)'
+  exporters:
+    debug: null
+    otlphttp/tempo:
+      endpoint: http://ops-tempo:4318
+      headers: {X-Scope-OrgID: platform}
+      sending_queue: {enabled: true, queue_size: 256}
+      retry_on_failure: {enabled: true, max_elapsed_time: 60s}
+    otlphttp/loki:
+      endpoint: http://ops-loki:3100/otlp
+      headers: {X-Scope-OrgID: platform}
+      sending_queue: {enabled: true, queue_size: 256}
+      retry_on_failure: {enabled: true, max_elapsed_time: 60s}
+  service:
+    extensions: [health_check, basicauth/server]
+    pipelines:
+      traces: {receivers: [otlp], processors: [memory_limiter, attributes/privacy, resource/security-domain, transform/privacy, batch], exporters: [otlphttp/tempo]}
+      logs: {receivers: [otlp], processors: [memory_limiter, attributes/privacy, resource/security-domain, transform/privacy, batch], exporters: [otlphttp/loki]}
+      metrics: null

@@ -1,0 +1,249 @@
+{
+  "manifestVersion": "1.0",
+  "providerId": "neon-403",
+  "providerVersion": "0.1.0-design",
+  "coreContractVersion": "1.0",
+  "mappingProfile": {
+    "id": "neon.4.0.3.observability",
+    "version": "1.0-proposed",
+    "mapperVersion": "not-implemented",
+    "nativeAuthority": "original_provider"
+  },
+  "sourceInstance": "source-neon-disabled",
+  "nativeEntityKinds": [
+    "neon.compute",
+    "neon.operation",
+    "neon.timeline"
+  ],
+  "nativeIdentityRefs": [],
+  "deploymentIntent": "disabled",
+  "integrationStage": "NOT_STARTED",
+  "enabled": false,
+  "authorizationBinding": {
+    "owner": "platform_registry",
+    "state": "unbound",
+    "bindingRef": null
+  },
+  "writePolicy": {
+    "enabled": false,
+    "defaultDeny": true,
+    "actionAuthority": "native_provider_only",
+    "approvalProfileRef": null
+  },
+  "claimOwners": {
+    "expected": "provider_profile_owner",
+    "observed": "probe_record_owner",
+    "qualified": "platform_qualification_registry"
+  },
+  "capabilities": [
+    {
+      "id": "entities.read",
+      "access": "read",
+      "expected": {
+        "support": "required",
+        "minimumIntegrationStage": "I0",
+        "declaredProfileVersion": "neon-4.0.3-v1-proposed"
+      },
+      "observed": {
+        "status": "NOT_PROBED",
+        "observedAt": null,
+        "probeProfileRef": null,
+        "evidenceRefs": []
+      },
+      "qualified": {
+        "status": "NOT_RUN",
+        "integrationStage": null,
+        "scopeRef": null,
+        "evaluatedAt": null,
+        "validUntil": null,
+        "evidenceRefs": []
+      },
+      "enabled": false
+    },
+    {
+      "id": "relations.read",
+      "access": "read",
+      "expected": {
+        "support": "optional",
+        "minimumIntegrationStage": "I0",
+        "declaredProfileVersion": "neon-4.0.3-v1-proposed"
+      },
+      "observed": {
+        "status": "NOT_PROBED",
+        "observedAt": null,
+        "probeProfileRef": null,
+        "evidenceRefs": []
+      },
+      "qualified": {
+        "status": "NOT_RUN",
+        "integrationStage": null,
+        "scopeRef": null,
+        "evaluatedAt": null,
+        "validUntil": null,
+        "evidenceRefs": []
+      },
+      "enabled": false
+    },
+    {
+      "id": "metrics.query",
+      "access": "read",
+      "expected": {
+        "support": "optional",
+        "minimumIntegrationStage": "I0",
+        "declaredProfileVersion": "neon-4.0.3-v1-proposed"
+      },
+      "observed": {
+        "status": "NOT_PROBED",
+        "observedAt": null,
+        "probeProfileRef": null,
+        "evidenceRefs": []
+      },
+      "qualified": {
+        "status": "NOT_RUN",
+        "integrationStage": null,
+        "scopeRef": null,
+        "evaluatedAt": null,
+        "validUntil": null,
+        "evidenceRefs": []
+      },
+      "enabled": false
+    },
+    {
+      "id": "operations.read",
+      "access": "read",
+      "expected": {
+        "support": "required",
+        "minimumIntegrationStage": "I0",
+        "declaredProfileVersion": "neon-4.0.3-v1-proposed"
+      },
+      "observed": {
+        "status": "NOT_PROBED",
+        "observedAt": null,
+        "probeProfileRef": null,
+        "evidenceRefs": []
+      },
+      "qualified": {
+        "status": "NOT_RUN",
+        "integrationStage": null,
+        "scopeRef": null,
+        "evaluatedAt": null,
+        "validUntil": null,
+        "evidenceRefs": []
+      },
+      "enabled": false
+    },
+    {
+      "id": "evidence.history.read",
+      "access": "read",
+      "expected": {
+        "support": "required",
+        "minimumIntegrationStage": "I1",
+        "declaredProfileVersion": "neon-4.0.3-v1-proposed"
+      },
+      "observed": {
+        "status": "NOT_PROBED",
+        "observedAt": null,
+        "probeProfileRef": null,
+        "evidenceRefs": []
+      },
+      "qualified": {
+        "status": "NOT_RUN",
+        "integrationStage": null,
+        "scopeRef": null,
+        "evaluatedAt": null,
+        "validUntil": null,
+        "evidenceRefs": []
+      },
+      "enabled": false
+    },
+    {
+      "id": "coverage.proof.read",
+      "access": "read",
+      "expected": {
+        "support": "required",
+        "minimumIntegrationStage": "I1",
+        "declaredProfileVersion": "neon-4.0.3-v1-proposed"
+      },
+      "observed": {
+        "status": "NOT_PROBED",
+        "observedAt": null,
+        "probeProfileRef": null,
+        "evidenceRefs": []
+      },
+      "qualified": {
+        "status": "NOT_RUN",
+        "integrationStage": null,
+        "scopeRef": null,
+        "evaluatedAt": null,
+        "validUntil": null,
+        "evidenceRefs": []
+      },
+      "enabled": false
+    },
+    {
+      "id": "actions.plan",
+      "access": "read",
+      "expected": {
+        "support": "optional",
+        "minimumIntegrationStage": "I2",
+        "declaredProfileVersion": "neon-4.0.3-v1-proposed"
+      },
+      "observed": {
+        "status": "NOT_PROBED",
+        "observedAt": null,
+        "probeProfileRef": null,
+        "evidenceRefs": []
+      },
+      "qualified": {
+        "status": "NOT_RUN",
+        "integrationStage": null,
+        "scopeRef": null,
+        "evaluatedAt": null,
+        "validUntil": null,
+        "evidenceRefs": []
+      },
+      "enabled": false
+    },
+    {
+      "id": "actions.execute",
+      "access": "write",
+      "expected": {
+        "support": "optional",
+        "minimumIntegrationStage": "I2",
+        "declaredProfileVersion": "neon-4.0.3-v1-proposed"
+      },
+      "observed": {
+        "status": "NOT_PROBED",
+        "observedAt": null,
+        "probeProfileRef": null,
+        "evidenceRefs": []
+      },
+      "qualified": {
+        "status": "NOT_RUN",
+        "integrationStage": null,
+        "scopeRef": null,
+        "evaluatedAt": null,
+        "validUntil": null,
+        "evidenceRefs": []
+      },
+      "enabled": false
+    }
+  ],
+  "sourceCoverage": {
+    "sourceInstance": "source-neon-disabled",
+    "scopeKind": "source_interval",
+    "status": "not_started",
+    "streamSetVersion": null,
+    "expectedStreams": [],
+    "observedStreams": [],
+    "asOf": null,
+    "coveredFrom": null,
+    "coveredThrough": null,
+    "proof": null
+  },
+  "exampleMetadata": {
+    "synthetic": true,
+    "runtimeQualification": "NOT_RUN",
+    "notice": "仅为本地合同与UI演示；全部来源、能力、状态与原生引用均非真实运行证据。"
+  }
+}

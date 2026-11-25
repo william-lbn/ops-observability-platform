@@ -1,0 +1,590 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.example.invalid/ops-observability/core/v1/core_event.schema.json",
+  "title": "Generic Core observation / provider fact envelope v1 — proposal",
+  "description": "通用观察与原生业务证据显式分类，不要求任何PG/VM/Host字段。认证/授权绑定在平台注册层；来源自报tenant不能授予权限。普通OTLP信号不能声明可靠业务事件。",
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "const": "1.0"
+    },
+    "eventId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "sourceInstance": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "entityRef": {
+      "$ref": "entity_ref.schema.json"
+    },
+    "eventKind": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9]*(?:[._/-][a-z0-9]+)*$",
+      "maxLength": 128
+    },
+    "signalKind": {
+      "type": "string",
+      "enum": [
+        "telemetry",
+        "snapshot",
+        "native_business_event",
+        "coverage_evidence"
+      ]
+    },
+    "occurredAt": {
+      "anyOf": [
+        {
+          "type": "string",
+          "format": "date-time"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "observedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "timeBasis": {
+      "type": "string",
+      "enum": [
+        "native_occurrence",
+        "source_observation"
+      ]
+    },
+    "origin": {
+      "$ref": "#/$defs/origin"
+    },
+    "operationBinding": {
+      "$ref": "#/$defs/operationBinding"
+    },
+    "reliability": {
+      "type": "object",
+      "properties": {
+        "deliveryClass": {
+          "type": "string",
+          "enum": [
+            "best_effort",
+            "source_replayable",
+            "evidence_profile"
+          ]
+        },
+        "evidenceProfileRef": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 1024
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "sourceCoverage": {
+          "$ref": "provider_manifest.schema.json#/$defs/sourceCoverage"
+        }
+      },
+      "required": [
+        "deliveryClass",
+        "evidenceProfileRef",
+        "sourceCoverage"
+      ],
+      "additionalProperties": false
+    },
+    "payload": {
+      "type": "object",
+      "maxProperties": 128,
+      "description": "来源载荷，仅用于已授权的解释；tenant/组织/Cluster标签及其中命令均不成为权限或执行指令。生产入口另限字节、嵌套、字段级隐私与基数。"
+    },
+    "exampleMetadata": {
+      "$ref": "#/$defs/exampleMetadata"
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "eventId",
+    "sourceInstance",
+    "entityRef",
+    "eventKind",
+    "signalKind",
+    "occurredAt",
+    "observedAt",
+    "timeBasis",
+    "origin",
+    "operationBinding",
+    "reliability",
+    "payload"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "nativeEventReference": {
+      "type": "object",
+      "properties": {
+        "sourceInstance": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "nativeEventId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "nativeEventType": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "producerId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "producerIncarnation": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "sequence": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^(0|[1-9][0-9]*)$",
+              "maxLength": 40
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "nativeRecordDigest": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "originalPayloadRef": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1024
+        }
+      },
+      "required": [
+        "sourceInstance",
+        "nativeEventId",
+        "nativeEventType",
+        "producerId",
+        "producerIncarnation",
+        "sequence",
+        "nativeRecordDigest",
+        "originalPayloadRef"
+      ],
+      "additionalProperties": false
+    },
+    "origin": {
+      "type": "object",
+      "properties": {
+        "providerId": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9]*(?:[._/-][a-z0-9]+)*$",
+          "maxLength": 128
+        },
+        "providerVersion": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "profileId": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9]*(?:[._/-][a-z0-9]+)*$",
+          "maxLength": 128
+        },
+        "profileVersion": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "mapperVersion": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "transport": {
+          "type": "string",
+          "enum": [
+            "otlp",
+            "poll",
+            "native_export",
+            "file_fixture"
+          ]
+        },
+        "sampling": {
+          "type": "string",
+          "enum": [
+            "sampled",
+            "not_sampled",
+            "unknown"
+          ]
+        },
+        "nativeEventRef": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/nativeEventReference"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "providerId",
+        "providerVersion",
+        "profileId",
+        "profileVersion",
+        "mapperVersion",
+        "transport",
+        "sampling",
+        "nativeEventRef"
+      ],
+      "additionalProperties": false
+    },
+    "operationBinding": {
+      "type": "object",
+      "properties": {
+        "state": {
+          "type": "string",
+          "enum": [
+            "none",
+            "correlation_only",
+            "native_verified"
+          ]
+        },
+        "operationRef": {
+          "anyOf": [
+            {
+              "$ref": "entity_ref.schema.json"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "bindingProofRef": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 1024
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "state",
+        "operationRef",
+        "bindingProofRef"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "const": "none"
+              }
+            },
+            "required": [
+              "state"
+            ]
+          },
+          "then": {
+            "properties": {
+              "operationRef": {
+                "type": "null"
+              },
+              "bindingProofRef": {
+                "type": "null"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "const": "native_verified"
+              }
+            },
+            "required": [
+              "state"
+            ]
+          },
+          "then": {
+            "properties": {
+              "operationRef": {
+                "type": "object"
+              },
+              "bindingProofRef": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 1024
+              }
+            }
+          }
+        }
+      ]
+    },
+    "exampleMetadata": {
+      "type": "object",
+      "properties": {
+        "synthetic": {
+          "const": true
+        },
+        "runtimeQualification": {
+          "const": "NOT_RUN"
+        },
+        "notice": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2048
+        }
+      },
+      "required": [
+        "synthetic",
+        "runtimeQualification",
+        "notice"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "origin": {
+            "properties": {
+              "transport": {
+                "const": "otlp"
+              }
+            },
+            "required": [
+              "transport"
+            ]
+          }
+        },
+        "required": [
+          "origin"
+        ]
+      },
+      "then": {
+        "properties": {
+          "signalKind": {
+            "const": "telemetry"
+          },
+          "origin": {
+            "properties": {
+              "nativeEventRef": {
+                "type": "null"
+              }
+            }
+          },
+          "operationBinding": {
+            "properties": {
+              "state": {
+                "enum": [
+                  "none",
+                  "correlation_only"
+                ]
+              }
+            }
+          },
+          "reliability": {
+            "properties": {
+              "deliveryClass": {
+                "const": "best_effort"
+              },
+              "evidenceProfileRef": {
+                "type": "null"
+              },
+              "sourceCoverage": {
+                "properties": {
+                  "status": {
+                    "enum": [
+                      "not_started",
+                      "unknown",
+                      "partial"
+                    ]
+                  },
+                  "proof": {
+                    "type": "null"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "signalKind": {
+            "const": "native_business_event"
+          }
+        },
+        "required": [
+          "signalKind"
+        ]
+      },
+      "then": {
+        "properties": {
+          "origin": {
+            "properties": {
+              "transport": {
+                "enum": [
+                  "native_export",
+                  "file_fixture"
+                ]
+              },
+              "sampling": {
+                "const": "not_sampled"
+              },
+              "nativeEventRef": {
+                "type": "object"
+              }
+            }
+          },
+          "reliability": {
+            "properties": {
+              "deliveryClass": {
+                "const": "evidence_profile"
+              },
+              "evidenceProfileRef": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 1024
+              },
+              "sourceCoverage": {
+                "properties": {
+                  "proof": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "signalKind": {
+            "const": "coverage_evidence"
+          }
+        },
+        "required": [
+          "signalKind"
+        ]
+      },
+      "then": {
+        "properties": {
+          "origin": {
+            "properties": {
+              "transport": {
+                "enum": [
+                  "native_export",
+                  "file_fixture"
+                ]
+              },
+              "sampling": {
+                "const": "not_sampled"
+              }
+            }
+          },
+          "reliability": {
+            "properties": {
+              "deliveryClass": {
+                "const": "evidence_profile"
+              },
+              "evidenceProfileRef": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 1024
+              },
+              "sourceCoverage": {
+                "properties": {
+                  "proof": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "signalKind": {
+            "enum": [
+              "telemetry",
+              "snapshot"
+            ]
+          }
+        },
+        "required": [
+          "signalKind"
+        ]
+      },
+      "then": {
+        "properties": {
+          "reliability": {
+            "properties": {
+              "sourceCoverage": {
+                "properties": {
+                  "status": {
+                    "enum": [
+                      "not_started",
+                      "unsupported",
+                      "unknown",
+                      "partial"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "timeBasis": {
+            "const": "native_occurrence"
+          }
+        },
+        "required": [
+          "timeBasis"
+        ]
+      },
+      "then": {
+        "properties": {
+          "occurredAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    }
+  ]
+}

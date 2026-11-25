@@ -1,0 +1,6 @@
+apiVersion: v2
+name: ops-reference
+description: 真实多租户公共验收参考服务，使用同一服务名验证跨租户隔离
+type: application
+version: 0.1.0
+appVersion: 0.1.0

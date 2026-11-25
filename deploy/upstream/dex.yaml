@@ -1,0 +1,16 @@
+fullnameOverride: ops-dex
+configSecret: {create: false, name: ops-dex-config}
+rbac: {create: false, createClusterScoped: false}
+resources:
+  requests: {cpu: 50m, memory: 64Mi}
+  limits: {cpu: 500m, memory: 256Mi}
+podSecurityContext: {runAsNonRoot: true, runAsUser: 1001, runAsGroup: 1001, fsGroup: 1001, seccompProfile: {type: RuntimeDefault}}
+securityContext: {allowPrivilegeEscalation: false, readOnlyRootFilesystem: true, capabilities: {drop: [ALL]}}
+volumes:
+  - name: chinese-theme
+    configMap: {name: ops-dex-theme}
+  - name: temp
+    emptyDir: {sizeLimit: 32Mi}
+volumeMounts:
+  - {name: chinese-theme, mountPath: /etc/dex/custom, readOnly: true}
+  - {name: temp, mountPath: /tmp}

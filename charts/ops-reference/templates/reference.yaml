@@ -1,0 +1,52 @@
+{{- $tenant := required "tenant required" .Values.tenant }}
+{{- $image := required "image.repository required" .Values.image.repository }}
+{{- $digest := required "image.digest required" .Values.image.digest }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ops-reference
+  labels: {app.kubernetes.io/part-of: ops-observability-platform}
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: ops-reference}
+  template:
+    metadata:
+      labels: {app: ops-reference, app.kubernetes.io/part-of: ops-observability-platform, ops.platform/tenant: {{ $tenant | quote }}}
+    spec:
+      automountServiceAccountToken: false
+      imagePullSecrets: {{ .Values.imagePullSecrets | toJson }}
+      securityContext: {runAsNonRoot: true, runAsUser: 65532, runAsGroup: 65532, fsGroup: 65532, seccompProfile: {type: RuntimeDefault}}
+      containers:
+        - name: reference
+          image: {{ printf "%s@%s" $image $digest | quote }}
+          env:
+            - {name: OTEL_SERVICE_NAME, value: {{ .Values.serviceName | quote }}}
+            - {name: OTEL_EXPORTER_OTLP_ENDPOINT, value: {{ required "collectorEndpoint required" .Values.collectorEndpoint | quote }}}
+            - name: OTEL_EXPORTER_OTLP_HEADERS
+              valueFrom: {secretKeyRef: {name: {{ .Values.otelSecret }}, key: headers}}
+            {{- if .Values.tls.enabled }}
+            - {name: OTEL_EXPORTER_OTLP_CERTIFICATE, value: /etc/otel-client/ca.crt}
+            - {name: OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE, value: /etc/otel-client/tls.crt}
+            - {name: OTEL_EXPORTER_OTLP_CLIENT_KEY, value: /etc/otel-client/tls.key}
+            {{- end }}
+          {{- if .Values.tls.enabled }}
+          volumeMounts: [{name: otel-client, mountPath: /etc/otel-client, readOnly: true}]
+          {{- end }}
+          ports: [{name: http, containerPort: 8081}]
+          readinessProbe: {httpGet: {path: /healthz, port: http}, initialDelaySeconds: 2}
+          livenessProbe: {httpGet: {path: /healthz, port: http}, initialDelaySeconds: 10}
+          securityContext: {allowPrivilegeEscalation: false, readOnlyRootFilesystem: true, capabilities: {drop: [ALL]}}
+          resources:
+            requests: {cpu: 25m, memory: 32Mi}
+            limits: {cpu: 500m, memory: 128Mi}
+      {{- if .Values.tls.enabled }}
+      volumes: [{name: otel-client, secret: {secretName: {{ .Values.tls.secretName }}, defaultMode: 0440}}]
+      {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata: {name: ops-reference}
+spec:
+  selector: {app: ops-reference}
+  ports: [{name: http, port: 8081, targetPort: http}]

@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata: {name: ops-postgres}
+spec:
+  serviceName: ops-postgres
+  replicas: 1
+  selector:
+    matchLabels: {app: ops-postgres}
+  template:
+    metadata:
+      labels: {app: ops-postgres, app.kubernetes.io/part-of: ops-observability-platform}
+    spec:
+      automountServiceAccountToken: false
+      imagePullSecrets: {{ .Values.imagePullSecrets | toJson }}
+      securityContext: {runAsUser: 999, runAsGroup: 999, fsGroup: 999, runAsNonRoot: true, seccompProfile: {type: RuntimeDefault}}
+      containers:
+        - name: postgres
+          image: {{ printf "%s@%s" (required "postgresImage.repository required" .Values.postgresImage.repository) (required "postgresImage.digest required" .Values.postgresImage.digest) | quote }}
+          env:
+            - {name: PGDATA, value: /var/lib/postgresql/data/pgdata}
+            - {name: POSTGRES_DB, value: ops}
+            - {name: POSTGRES_USER, value: postgres}
+            - name: POSTGRES_PASSWORD
+              valueFrom: {secretKeyRef: {name: {{ .Values.databaseSecret }}, key: adminPassword}}
+          ports: [{name: postgres, containerPort: 5432}]
+          readinessProbe: {exec: {command: [pg_isready, -U, postgres, -d, ops]}, initialDelaySeconds: 5}
+          livenessProbe: {exec: {command: [pg_isready, -U, postgres, -d, ops]}, initialDelaySeconds: 30}
+          resources:
+            requests: {cpu: 100m, memory: 128Mi}
+            limits: {cpu: '2', memory: 1Gi}
+          securityContext: {allowPrivilegeEscalation: false, capabilities: {drop: [ALL]}}
+          volumeMounts:
+            - {name: data, mountPath: /var/lib/postgresql/data}
+            - {name: run, mountPath: /var/run/postgresql}
+      volumes: [{name: run, emptyDir: {}}]
+  volumeClaimTemplates:
+    - metadata: {name: data}
+      spec:
+        accessModes: [ReadWriteOnce]
+        storageClassName: {{ .Values.storageClass | quote }}
+        resources: {requests: {storage: {{ .Values.databaseStorage }}}}
+---
+apiVersion: v1
+kind: Service
+metadata: {name: ops-postgres}
+spec:
+  clusterIP: None
+  selector: {app: ops-postgres}
+  ports: [{name: postgres, port: 5432, targetPort: postgres}]
