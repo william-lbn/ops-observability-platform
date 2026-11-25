@@ -30,6 +30,8 @@ function resourceUsage(usage: RecordData, capacity: RecordData): string { const 
 function sample(result: RecordData): number | null { return Array.isArray(result.value) ? numeric(result.value[1]) : null; }
 function metricValue(data: RecordData, unit: string): string { const values = results(data); const n = values.length ? sample(values[0]!) : null; return n === null ? '暂无有效样本' : unit === '%' ? (n * 100).toFixed(2) + '%' : unit === 'ms' ? (n * 1000).toFixed(1) + ' ms' : n.toFixed(3) + unit; }
 function card(parent: HTMLElement, title: string, value: string, explain: string) { const c = node('section', '', 'card'); c.append(node('h3', title), node('strong', value), node('p', explain)); parent.append(c); }
+function identityLabel(item:RecordData):HTMLElement{const label=node('div');label.append(node('strong',String(item.name)),node('p','原始身份：'+String(item.uid),'muted'));return label;}
+function snapshotState(item:RecordData):string{const snapshot=obj(item.snapshot);if(item.stale)return '观察已过期；当前状态待确认';if(snapshot.phase){const reasons=array(snapshot.containers).map(c=>c.waitingReason).filter(Boolean);return String(snapshot.phase)+(reasons.length?' · '+reasons.join('、'):' · 仍需结合 Ready 条件与请求体验');}if(item.kind==='kubernetes.node'){const ready=array(snapshot.conditions).find(c=>c.type==='Ready');return ready?.status==='True'?'当前就绪条件满足':'节点就绪条件待核验';}if(item.kind==='kubernetes.namespace.health')return String(snapshot.ready)+' / '+String(snapshot.pods)+' 个 Pod 就绪；异常启动 '+String(snapshot.crashLoops);return '当前仅提供来源观察，请核对证据与时间';}
 function lineChart(parent: HTMLElement, data: RecordData, label: string) {
     const series = results(data);
     const points = series.flatMap(s => Array.isArray(s.values) ? s.values as unknown[][] : []);
@@ -83,18 +85,19 @@ async function platformView(current: number) {
         for (const key of Object.keys(hard))
             detail.append(node('p', String(q.name) + ' · ' + key + '：' + String(used[key] ?? '未提供') + ' / ' + String(hard[key]), 'muted'));
     } if (!array(s.quotas).length)
-        detail.append(node('p', '未获得已配置配额；这不表示容量无限。')); return [String(v.name), String(s.ready) + ' / ' + String(s.pods), String(s.crashLoops) + ' / ' + String(s.controllerFailures ?? '未提供'), String(s.pendingPVCs), String(s.historicalFailed) + ' / ' + String(s.completed), detail]; }));
+        detail.append(node('p', '未获得已配置配额；这不表示容量无限。')); return [identityLabel(v), String(s.ready) + ' / ' + String(s.pods), String(s.crashLoops) + ' / ' + String(s.controllerFailures ?? '未提供'), String(s.pendingPVCs), String(s.historicalFailed) + ' / ' + String(s.completed), detail]; }));
     const quality = panel('来源身份与采集质量');
     table(quality, ['来源', '当前状态', '最近成功观察', '预期 / 已观察', '错误代码'], array(d.sources).map(s => [String(s.source), s.stale ? '观察已过期 · 当前待确认' : s.state === 'observed_partial' ? '已观察 · 部分覆盖' : s.state === 'observed_incomplete' ? '预期采集目标缺少样本' : s.state === 'identity_changed' ? '身份变化 · 已停止接纳' : '来源暂不可读', time(s.lastSuccessAt), String(Array.isArray(s.expectedSet) ? s.expectedSet.length : 0) + ' / ' + String(Array.isArray(s.observedSet) ? s.observedSet.length : 0), String(s.errorCode || '无已记录错误')]));
     const metricPanel = panel('基础设施指标快照');
     metricPanel.append(node('p', '数据来自平台域固定查询。空结果表示未获得样本；正常零值单独显示。', 'muted'));
     for (const [metric, title, unit] of [['node_cpu', 'CPU 使用率', '%'], ['node_memory', '内存使用率', '%'], ['disk_used', '文件系统使用率', '%'], ['network_drops', '网卡丢包速率', '次/秒'], ['dns_failures', 'DNS 失败响应速率', '次/秒'], ['collector_refused', '采集入口拒绝速率', '条/秒'], ['collector_send_failed', '日志投递失败速率', '条/秒']]) {
+        metricPanel.append(node('h3',title!));
         try {
             const data = await api('platform/query?metric=' + metric);
             if (generation !== current)
                 return;
             const rows = results(data);
-            table(metricPanel, [title!, '当前值'], rows.map(item => { const n = sample(item); const labels = obj(item.metric); return [String(labels.node || labels.instance || labels.job || '已登记平台范围'), n === null ? '无有效样本' : unit === '%' ? (n * 100).toFixed(2) + '%' : n.toFixed(3) + ' ' + unit]; }));
+            table(metricPanel, ['对象与观测维度', '当前值'], rows.map(item => { const n = sample(item); const labels = obj(item.metric);const target=[String(labels.node || labels.instance || labels.job || '已登记平台范围'),labels.mountpoint?'挂载点 '+String(labels.mountpoint):'',labels.device?'设备 '+String(labels.device):''].filter(Boolean).join(' · '); return [target, n === null ? '无有效样本' : unit === '%' ? (n * 100).toFixed(2) + '%' : n.toFixed(3) + ' ' + unit]; }));
         }
         catch (e) {
             metricPanel.append(node('p', title + '：' + (e as Error).message, 'muted'));
@@ -137,7 +140,7 @@ async function renderLogs(output: HTMLElement, source: RecordData) {
             }
             catch { /* Opaque text stays escaped plain text. */ }
             const labels = obj(stream.stream), metadata = obj(entry[2]);
-            const traceID = String(metadata.trace_id || payload.traceId || '');
+            const traceID = String(metadata.trace_id || labels.trace_id || payload.traceId || '');
             const link = /^[a-fA-F0-9]{32}$/.test(traceID) && supportsSignal(source, 'traces') ? button('查看关联调用链', () => traceDetail(output, source, traceID)) : '此样本未提供可读取的链路上下文';
             rows.push([time(Number(entry[0]) / 1e6), String(payload.status || payload.code || labels.severity_text || labels.detected_level || '观察样本'), raw, link]);
         }
@@ -285,7 +288,7 @@ async function render() {
             if (generation !== current)
                 return;
             const parent = panel('资源当前观察');
-            table(parent, ['资源名称', '原始身份', '来源', '最后观测', '证据质量', '历史观察'], list(data).map(s => [String(s.name), String(s.uid), String(s.source), time(s.observedAt), s.stale ? '数据已过期，当前待确认' : '当前快照 · 部分覆盖', button('查看历史', async () => { const result = await api('catalog/history?' + new URLSearchParams({ source: String(s.source), uid: String(s.uid) })); const history = panel('历史观察 · ' + String(s.name)); history.append(node('p', String(result.message)), node('pre', JSON.stringify(result.items, null, 2))); })]));
+            table(parent, ['资源名称', '原始身份', '来源', '当前状态与核验建议', '最后观测', '证据质量', '历史观察'], list(data).map(s => [String(s.name), String(s.uid), String(s.source), snapshotState(s), time(s.observedAt), s.stale ? '数据已过期，当前待确认' : '当前快照 · 部分覆盖', button('查看历史', async () => { const result = await api('catalog/history?' + new URLSearchParams({ source: String(s.source), uid: String(s.uid) })); const history = panel('历史观察 · ' + String(s.name)); history.append(node('p', String(result.message)), node('pre', JSON.stringify(result.items, null, 2))); })]));
         }
         else if (page === 'signals') {
             const data = await api('sources');
@@ -399,3 +402,4 @@ catch { /* The emergency entry remains available when the identity discovery is 
 void discoverIdentity();
 get('clock').textContent = time(new Date().toISOString());
 void start();
+
